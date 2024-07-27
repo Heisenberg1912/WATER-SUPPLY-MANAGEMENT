@@ -33,42 +33,47 @@ def generate_household_data(start_date, end_date):
     })
     return data
 
-# Load pre-trained model and scaler
+# Create the preprocessor to ensure it produces exactly 7 features
+def create_preprocessor():
+    numeric_features = ['Household Size', 'Avg Temp']
+    categorical_features = ['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', StandardScaler(), numeric_features),
+            ('cat', OneHotEncoder(drop='first'), categorical_features)  # Drop first to avoid dummy variable trap
+        ], remainder='passthrough'
+    )
+
+    return preprocessor
+
+# Load pre-trained model and preprocessor
 @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-def load_model_and_scaler(model_file, scaler_file):
+def load_model_and_preprocessor(model_file, preprocessor_file):
     try:
         model = tf.keras.models.load_model(model_file)
     except Exception as e:
         return None, None, f"Failed to load model: {str(e)}"
     
     try:
-        scaler = joblib.load(scaler_file)
+        preprocessor = joblib.load(preprocessor_file)
     except Exception as e:
-        return None, None, f"Failed to load scaler: {str(e)}"
+        return None, None, f"Failed to load preprocessor: {str(e)}"
 
-    return model, scaler, None
+    return model, preprocessor, None
 
-# Ensure scaler is fitted correctly before transforming data
+# Ensure preprocessor is fitted correctly before transforming data
 @st.cache(allow_output_mutation=True)
-def fit_scaler(scaler, data):
-    numeric_features = data[['Household Size', 'Avg Temp']]
-    scaler.fit(numeric_features)
-    return scaler
+def fit_preprocessor(preprocessor, data):
+    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
+    preprocessor.fit(features)
+    return preprocessor
 
-# Transform the data
-def transform_data(data, scaler):
-    numeric_features = data[['Household Size', 'Avg Temp']]
-    categorical_features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']]
-    
-    # Scale numeric features
-    numeric_transformed = scaler.transform(numeric_features)
-    
-    # One-hot encode categorical features
-    encoder = OneHotEncoder(drop='first', sparse=False)
-    categorical_transformed = encoder.fit_transform(categorical_features)
-    
-    # Concatenate all features
-    features_transformed = np.hstack((numeric_transformed, categorical_transformed))
+# Debugging function to print preprocessed feature names and shapes
+def debug_preprocessor(preprocessor, data):
+    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
+    features_transformed = preprocessor.transform(features)
+    st.write("Shape of features after transformation:", features_transformed.shape)
     return features_transformed
 
 # Navbar setup
@@ -153,43 +158,44 @@ elif selected == "Data":
 elif selected == "Model":
     st.title("Model Training and Prediction")
     model_path = 'water_usage_model.h5'
-    scaler_path = 'scaler.pkl'
+    preprocessor_path = 'preprocessor.pkl'
 
     # File upload widgets
     model_file = st.file_uploader("Upload the model file (water_usage_model.h5)", type=["h5"])
-    scaler_file = st.file_uploader("Upload the scaler file (scaler.pkl)", type=["pkl"])
+    preprocessor_file = st.file_uploader("Upload the preprocessor file (preprocessor.pkl)", type=["pkl"])
 
     if model_file is not None:
         with open(model_path, "wb") as f:
             f.write(model_file.getbuffer())
 
-    if scaler_file is not None:
-        with open(scaler_path, "wb") as f:
-            f.write(scaler_file.getbuffer())
+    if preprocessor_file is not None:
+        with open(preprocessor_path, "wb") as f:
+            f.write(preprocessor_file.getbuffer())
 
-    # Check if model and scaler files exist
+    # Check if model and preprocessor files exist
     if not os.path.exists(model_path):
         st.error("Model file not found. Please upload the model file to the correct path.")
         st.stop()
 
-    if not os.path.exists(scaler_path):
-        st.error("Scaler file not found. Please upload the scaler file to the correct path.")
+    if not os.path.exists(preprocessor_path):
+        st.error("Preprocessor file not found. Please upload the preprocessor file to the correct path.")
         st.stop()
 
-    # Load pre-trained model and scaler
-    model, scaler, error_message = load_model_and_scaler(model_path, scaler_path)
+    # Load pre-trained model and preprocessor
+    model, preprocessor, error_message = load_model_and_preprocessor(model_path, preprocessor_path)
     if error_message:
         st.error(error_message)
         st.stop()
 
-    # Ensure scaler is fitted correctly
+    # Ensure preprocessor is fitted correctly
     household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
-    scaler = fit_scaler(scaler, household_data)
+    preprocessor = fit_preprocessor(preprocessor, household_data)
 
     # Example of model prediction
     def predict_usage(model, data):
         # Select relevant features for prediction
-        features_transformed = transform_data(data, scaler)
+        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
+        features_transformed = preprocessor.transform(features)
         st.write("Shape of features after transformation:", features_transformed.shape)
         prediction = model.predict(features_transformed)
         return prediction.flatten()
@@ -197,9 +203,8 @@ elif selected == "Model":
     if st.button("Predict Usage"):
         try:
             # Debugging: Verify input shape
-            features_transformed = transform_data(household_data, scaler)
-            st.write("Shape of features after transformation for prediction:", features_transformed.shape)
-
+            features_transformed = debug_preprocessor(preprocessor, household_data)
+            
             prediction = predict_usage(model, household_data)
             household_data['Predicted Usage'] = prediction
 
