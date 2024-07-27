@@ -1,13 +1,17 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import pycaret.regression as pyreg
+import tensorflow as tf
+import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from streamlit_option_menu import option_menu
+import os
 
 # Generate example household data
 @st.experimental_memo
@@ -27,6 +31,28 @@ def generate_household_data(start_date, end_date):
         'Date': np.random.choice(dates, size=num_households)
     })
     return data
+
+# Load pre-trained model and preprocessor
+@st.cache(allow_output_mutation=True, suppress_st_warning=True)
+def load_model_and_preprocessor(model_file, preprocessor_file):
+    try:
+        model = tf.keras.models.load_model(model_file)
+    except Exception as e:
+        return None, None, f"Failed to load model: {str(e)}"
+    
+    try:
+        preprocessor = joblib.load(preprocessor_file)
+    except Exception as e:
+        return None, None, f"Failed to load preprocessor: {str(e)}"
+
+    return model, preprocessor, None
+
+# Ensure preprocessor is fitted correctly before transforming data
+@st.cache(allow_output_mutation=True)
+def fit_preprocessor(preprocessor, data):
+    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+    preprocessor.fit(features)
+    return preprocessor
 
 # Navbar setup
 with st.sidebar:
@@ -104,59 +130,4 @@ elif selected == "Data":
         heatmap_data = household_data.pivot_table(values='Monthly Water Usage (Liters)', index='Household ID', columns='Date', fill_value=0)
         fig3, ax3 = plt.subplots(figsize=(10, 8))
         sns.heatmap(heatmap_data, ax=ax3, cmap='viridis')
-        st.pyplot(fig3)
-
-# Model page
-elif selected == "Model":
-    st.title("Model Training and Prediction")
-    date_option = st.selectbox("Select date range for training", ["1 month", "6 months", "1 year"])
-
-    if date_option == "1 month":
-        start_date = datetime.now() - timedelta(days=30)
-    elif date_option == "6 months":
-        start_date = datetime.now() - timedelta(days=182)
-    elif date_option == "1 year":
-        start_date = datetime.now() - timedelta(days=365)
-
-    end_date = datetime.now()
-    
-    # Generate data
-    household_data = generate_household_data(start_date, end_date)
-
-    # PyCaret setup and model training
-    st.write("### Training Model")
-    if st.button("Train Model"):
-        pycaret_setup = pyreg.setup(data=household_data, target='Monthly Water Usage (Liters)', silent=True, session_id=123)
-        best_model = pyreg.compare_models()
-
-        st.write("### Best Model")
-        st.write(best_model)
-
-        # Save model
-        pyreg.save_model(best_model, 'best_water_usage_model')
-
-    # Load model and make predictions
-    st.write("### Predict Water Usage")
-    if st.button("Predict Usage"):
-        best_model = pyreg.load_model('best_water_usage_model')
-        predictions = pyreg.predict_model(best_model, data=household_data)
-        household_data['Predicted Usage'] = predictions['Label']
-
-        st.write("### Predicted Data", household_data)
-
-        # Interactive plot for predictions
-        fig4 = go.Figure()
-        fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Monthly Water Usage (Liters)'], mode='lines', name='Actual'))
-        fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Predicted Usage'], mode='lines', name='Predicted'))
-        fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
-        st.plotly_chart(fig4)
-
-        # Saving data example
-        if st.button("Save Data"):
-            household_data.to_csv('predicted_household_water_usage.csv')
-            st.write("Data saved to `predicted_household_water_usage.csv`")
-
-# About page
-elif selected == "About":
-    st.title("About")
-    st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict future water usage based on various factors such as household size, days without water, and average temperature. The data is visualized using interactive plots for better understanding and decision making.")
+        st.pyplot
