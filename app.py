@@ -11,6 +11,27 @@ from datetime import datetime, timedelta
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+# List of wards
+wards = [
+    "Sirapur", "Chandan Nagar", "Kaalaani Nagar", "Sukhadev Nagar", "Raaj Nagar", "Malhaaraganj",
+    "Janata Colony", "Joona Risaala", "Vrindaavan", "Baanaganga", "Bhaageerathpura", "Govind Colony",
+    "Sangamanagar", "Ashok Nagar", "Bijaasan", "Nandabaag", "Kushavaah Nagar", "Sant Kabeer", 
+    "Vishvakarma", "Gauree Nagar", "Shyaam Nagar", "P.Dee.D.Upaa. Nagar", "Sv. Raajesh Joshee", 
+    "Sant Baaleejee Mahaaraaj", "Nanda Nagar", "Jeen Maata", "Pashupati Naath", "Maam Tulaja Bhavaanee", 
+    "Dr Shyaamaaprasaad Mukharjee Nagar", "Sant Ravidaas", "Mahaaraaja Chhatrasaal", 
+    "Atal Bihaaree Baajapeyee", "Sookhaliya", "Shaheed BhagatSinh", "Lasudiya Moree", "Nepaaniya", 
+    "Saamee Kripa", "Haajee Colony", "Naaharasha Havelee", "Khajaraana", "Kailaashapuree", 
+    "Swami Vivekaanand", "Shreenagar", "H.I.G.", "Dr. Bheemrao Ambedkar", "Somanaath", 
+    "Saradaar Vallabh Bhai", "Geeta Bhavan", "Tilak Nagar", "Brajeshvaree", "Maam Bhagavatee Nagar", 
+    "Musakkhedi", "Dr Maulaana Aajaad Nagar", "Residency", "Saaooth Tukoganj", "Snehalata Ganj", 
+    "Devi Ahilyaabai", "Emli Bazaar", "Harasiddhee", "Ranipuraa", "Taatyaa Saravate", "Raavajee Baazaar", 
+    "Navalakha", "Chitaavad", "Sant Kavar Raam", "Shaheed Hemu Kolonee", "Mahaaraaja Holakar", 
+    "Bambaee Baazaar", "Jawaahar Maarg", "Lok Naayak Nagar", "Dravid Nagar", "Lok Maanya Nagar", 
+    "Lakshman Sinh Chauhaan", "Vishnupuree", "Paalada", "Mundlaa Naayta", "Billavali", "Choithram", 
+    "Sukhniwas", "Dr Rajendra Prasaad", "Annapurna", "Sudaama Nagar", "Gumaastaa Nagar", 
+    "Dawaarkapuri", "Prajaapat Nagar"
+]
+
 # Function to create and train a new model
 def create_and_train_model(data):
     features = data[['Household Size', 'Num Days No Water', 'Avg Temp', 'Season_Spring', 'Season_Summer']].values
@@ -60,6 +81,9 @@ elif date_option == "1 year":
 
 end_date = datetime.now()
 
+# Ward selection
+selected_ward = st.selectbox("Select Ward", wards)
+
 # Generate example household data
 @st.experimental_memo
 def generate_household_data(start_date, end_date):
@@ -87,7 +111,7 @@ def generate_household_data(start_date, end_date):
 # Update data based on selected date range
 if st.button("Update Data"):
     household_data = generate_household_data(start_date, end_date)
-    st.write("### Household Data", household_data)
+    st.write(f"### Household Data for {selected_ward} Ward", household_data)
 
     # Calculate statistics
     total_households = len(household_data)
