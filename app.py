@@ -8,51 +8,43 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from streamlit_option_menu import option_menu
-import os
 
-# Generate example household data
-@st.experimental_memo
-def generate_household_data(start_date, end_date):
-    np.random.seed(42)  # For reproducible results
-    num_households = 100
-    dates = pd.date_range(start=start_date, end=end_date)
-    data = pd.DataFrame({
-        'Household ID': np.arange(1, num_households + 1),
-        'Ward': np.random.choice(['A', 'B', 'C', 'D'], size=num_households),
-        'Area': np.random.choice(['Urban', 'Suburban', 'Rural'], size=num_households),
-        'Monthly Water Usage (Liters)': np.random.rand(num_households) * 150,
-        'Leakage Detected (Yes/No)': np.random.choice(['Yes', 'No'], size=num_households),
-        'Disparity in Supply (Yes/No)': np.random.choice(['Yes', 'No'], size=num_households),
-        'Income Level': np.random.choice(['Low', 'Medium', 'High'], size=num_households),
-        'Household Size': np.random.randint(1, 6, size=num_households),
-        'Date': np.random.choice(dates, size=num_households)
-    })
-    return data
+# Function to create and train a new model
+def create_and_train_model(data):
+    features = data[['Household Size', 'Num Days No Water', 'Avg Temp']].values
+    target = data['Water Usage'].values
 
-# Load pre-trained model and preprocessor
-@st.cache(allow_output_mutation=True, suppress_st_warning=True)
-def load_model_and_preprocessor(model_file, preprocessor_file):
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(1)
+    ])
+
+    model.compile(optimizer='adam', loss='mse')
+    model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+
+    return model, scaler
+
+# Function to load or create the model
+@st.experimental_singleton
+def load_or_create_model(data):
     try:
-        model = tf.keras.models.load_model(model_file)
-    except Exception as e:
-        return None, None, f"Failed to load model: {str(e)}"
-    
-    try:
-        preprocessor = joblib.load(preprocessor_file)
-    except Exception as e:
-        return None, None, f"Failed to load preprocessor: {str(e)}"
-
-    return model, preprocessor, None
-
-# Ensure preprocessor is fitted correctly before transforming data
-@st.cache(allow_output_mutation=True)
-def fit_preprocessor(preprocessor, data):
-    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-    preprocessor.fit(features)
-    return preprocessor
+        model = tf.keras.models.load_model('water_usage_model.h5')
+        scaler = joblib.load('scaler.pkl')
+    except:
+        model, scaler = create_and_train_model(data)
+        model.save('water_usage_model.h5')
+        joblib.dump(scaler, 'scaler.pkl')
+    return model, scaler
 
 # Navbar setup
 with st.sidebar:
@@ -78,6 +70,24 @@ elif selected == "Data":
 
     end_date = datetime.now()
 
+    # Generate example household data
+    @st.experimental_memo
+    def generate_household_data(start_date, end_date):
+        np.random.seed(42)  # For reproducible results
+        num_households = 100
+        dates = pd.date_range(start=start_date, end=end_date)
+        data = pd.DataFrame({
+            'Date': np.random.choice(dates, size=num_households),
+            'Household ID': np.arange(1, num_households + 1),
+            'Received Water': np.random.choice([True, False], size=num_households, p=[0.8, 0.2]),
+            'Water Usage': np.random.rand(num_households) * 150,
+            'Water Limit': np.random.choice([100, 150, 200], size=num_households),
+            'Household Size': np.random.randint(1, 6, size=num_households),
+            'Num Days No Water': np.random.randint(0, 30, size=num_households),
+            'Avg Temp': np.random.rand(num_households) * 10 + 15  # Average temperature
+        })
+        return data
+
     # Update data based on selected date range
     if st.button("Update Data"):
         household_data = generate_household_data(start_date, end_date)
@@ -85,18 +95,18 @@ elif selected == "Data":
 
         # Calculate statistics
         total_households = len(household_data)
-        households_receiving_water = household_data['Leakage Detected (Yes/No)'].value_counts().get('No', 0)
+        households_receiving_water = household_data['Received Water'].sum()
         households_not_receiving_water = total_households - households_receiving_water
 
-        used_within_limit = (household_data['Monthly Water Usage (Liters)'] <= 100).sum()
-        wasted_beyond_limit = (household_data['Monthly Water Usage (Liters)'] > 100).sum()
+        used_within_limit = (household_data['Water Usage'] <= household_data['Water Limit']).sum()
+        wasted_beyond_limit = (household_data['Water Usage'] > household_data['Water Limit']).sum()
 
-        total_usage = household_data['Monthly Water Usage (Liters)'].sum()
-        total_wasted = household_data.loc[household_data['Monthly Water Usage (Liters)'] > 100, 'Monthly Water Usage (Liters)'].sum() - 100 * wasted_beyond_limit
+        total_usage = household_data['Water Usage'].sum()
+        total_wasted = household_data.loc[household_data['Water Usage'] > household_data['Water Limit'], 'Water Usage'].sum() - household_data.loc[household_data['Water Usage'] > household_data['Water Limit'], 'Water Limit'].sum()
 
-        mean_usage = household_data['Monthly Water Usage (Liters)'].mean()
-        median_usage = household_data['Monthly Water Usage (Liters)'].median()
-        std_usage = household_data['Monthly Water Usage (Liters)'].std()
+        mean_usage = household_data['Water Usage'].mean()
+        median_usage = household_data['Water Usage'].median()
+        std_usage = household_data['Water Usage'].std()
 
         st.write(f"**Total households**: {total_households}")
         st.write(f"**Households receiving water**: {households_receiving_water}")
@@ -127,7 +137,40 @@ elif selected == "Data":
         st.plotly_chart(fig2)
 
         # Heatmap for water usage
-        heatmap_data = household_data.pivot_table(values='Monthly Water Usage (Liters)', index='Household ID', columns='Date', fill_value=0)
+        heatmap_data = household_data.pivot_table(values='Water Usage', index='Household ID', columns='Date', fill_value=0)
         fig3, ax3 = plt.subplots(figsize=(10, 8))
         sns.heatmap(heatmap_data, ax=ax3, cmap='viridis')
-        st.pyplot
+        st.pyplot(fig3)
+
+# Model page
+elif selected == "Model":
+    st.title("Model Training and Prediction")
+    # Load or create model
+    model, scaler = load_or_create_model(generate_household_data(datetime.now() - timedelta(days=365), datetime.now()))
+
+    # Example of model prediction
+    def predict_usage(model, data):
+        # Ensure the data has the correct shape
+        features = data[['Household Size', 'Num Days No Water', 'Avg Temp']].values
+        features = scaler.transform(features)
+        prediction = model.predict(features)
+        return prediction.flatten()
+
+    if st.button("Predict Usage"):
+        household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
+        try:
+            prediction = predict_usage(model, household_data)
+            household_data['Predicted Usage'] = prediction
+
+            st.write("### Predicted Data", household_data)
+
+            # Interactive plot for predictions
+            fig4 = go.Figure()
+            fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Water Usage'], mode='lines', name='Actual'))
+            fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Predicted Usage'], mode='lines', name='Predicted'))
+            fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
+            st.plotly_chart(fig4)
+
+            # Saving data example
+            if st.button("Save Data"):
+                household_data.to_csv('
