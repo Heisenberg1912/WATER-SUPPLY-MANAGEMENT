@@ -8,7 +8,6 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from streamlit_option_menu import option_menu
@@ -34,7 +33,7 @@ def generate_household_data(start_date, end_date):
     return data
 
 # Load pre-trained model and preprocessor
-@st.cache(allow_output_mutation=True, suppress_st_warning=True)
+@st.cache(allow_output_mutation=True)
 def load_model_and_preprocessor(model_file, preprocessor_file):
     try:
         model = tf.keras.models.load_model(model_file)
@@ -79,27 +78,32 @@ elif selected == "Data":
 
     end_date = datetime.now()
 
-    # Update data based on selected date range
     if st.button("Update Data"):
         household_data = generate_household_data(start_date, end_date)
-        st.write("### Household Data", household_data)
+        wards = household_data['Ward'].unique()
+        selected_ward = st.selectbox("Select Ward", wards)
+
+        # Filter data based on selected ward
+        ward_data = household_data[household_data['Ward'] == selected_ward]
+
+        st.write(f"### Household Data for Ward {selected_ward}", ward_data)
 
         # Calculate statistics
-        total_households = len(household_data)
-        households_receiving_water = household_data['Leakage Detected (Yes/No)'].value_counts().get('No', 0)
+        total_households = len(ward_data)
+        households_receiving_water = ward_data['Leakage Detected (Yes/No)'].value_counts().get('No', 0)
         households_not_receiving_water = total_households - households_receiving_water
 
-        used_within_limit = (household_data['Monthly Water Usage (Liters)'] <= 100).sum()
-        wasted_beyond_limit = (household_data['Monthly Water Usage (Liters)'] > 100).sum()
+        used_within_limit = (ward_data['Monthly Water Usage (Liters)'] <= 100).sum()
+        wasted_beyond_limit = (ward_data['Monthly Water Usage (Liters)'] > 100).sum()
 
-        total_usage = household_data['Monthly Water Usage (Liters)'].sum()
-        total_wasted = household_data.loc[household_data['Monthly Water Usage (Liters)'] > 100, 'Monthly Water Usage (Liters)'].sum() - 100 * wasted_beyond_limit
+        total_usage = ward_data['Monthly Water Usage (Liters)'].sum()
+        total_wasted = ward_data.loc[ward_data['Monthly Water Usage (Liters)'] > 100, 'Monthly Water Usage (Liters)'].sum() - 100 * wasted_beyond_limit
 
-        mean_usage = household_data['Monthly Water Usage (Liters)'].mean()
-        median_usage = household_data['Monthly Water Usage (Liters)'].median()
-        std_usage = household_data['Monthly Water Usage (Liters)'].std()
+        mean_usage = ward_data['Monthly Water Usage (Liters)'].mean()
+        median_usage = ward_data['Monthly Water Usage (Liters)'].median()
+        std_usage = ward_data['Monthly Water Usage (Liters)'].std()
 
-        st.write(f"**Total households**: {total_households}")
+        st.write(f"**Total households in Ward {selected_ward}**: {total_households}")
         st.write(f"**Households receiving water**: {households_receiving_water}")
         st.write(f"**Households not receiving water**: {households_not_receiving_water}")
         st.write(f"**Households using water within limit**: {used_within_limit}")
@@ -115,7 +119,7 @@ elif selected == "Data":
             x=['Receiving Water', 'Not Receiving Water'], 
             y=[households_receiving_water, households_not_receiving_water],
             labels={'x': 'Household Status', 'y': 'Number of Households'},
-            title='Households Receiving vs. Not Receiving Water'
+            title=f'Households Receiving vs. Not Receiving Water in Ward {selected_ward}'
         )
         st.plotly_chart(fig)
 
@@ -123,15 +127,24 @@ elif selected == "Data":
             x=['Within Limit', 'Beyond Limit'], 
             y=[used_within_limit, wasted_beyond_limit],
             labels={'x': 'Usage Status', 'y': 'Number of Households'},
-            title='Households Using Water Within Limit vs. Beyond Limit'
+            title=f'Households Using Water Within Limit vs. Beyond Limit in Ward {selected_ward}'
         )
         st.plotly_chart(fig2)
 
+        # Additional graphs
+        # Water usage distribution
+        fig3 = px.histogram(ward_data, x='Monthly Water Usage (Liters)', nbins=20, title=f'Water Usage Distribution in Ward {selected_ward}')
+        st.plotly_chart(fig3)
+
+        # Box plot for water usage by income level
+        fig4 = px.box(ward_data, x='Income Level', y='Monthly Water Usage (Liters)', title=f'Water Usage by Income Level in Ward {selected_ward}')
+        st.plotly_chart(fig4)
+
         # Heatmap for water usage
-        heatmap_data = household_data.pivot_table(values='Monthly Water Usage (Liters)', index='Household ID', columns='Date', fill_value=0)
-        fig3, ax3 = plt.subplots(figsize=(10, 8))
-        sns.heatmap(heatmap_data, ax=ax3, cmap='viridis')
-        st.pyplot(fig3)
+        heatmap_data = ward_data.pivot_table(values='Monthly Water Usage (Liters)', index='Household ID', columns='Date', fill_value=0)
+        fig5, ax5 = plt.subplots(figsize=(10, 8))
+        sns.heatmap(heatmap_data, ax=ax5, cmap='viridis')
+        st.pyplot(fig5)
 
 # Model page
 elif selected == "Model":
@@ -194,15 +207,15 @@ elif selected == "Model":
             st.write(prediction[:5])
 
             # Interactive plot for predictions
-            fig4 = go.Figure()
-            fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Monthly Water Usage (Liters)'], mode='lines', name='Actual'))
-            fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Predicted Usage'], mode='lines', name='Predicted'))
-            fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
-            st.plotly_chart(fig4)
+            fig6 = go.Figure()
+            fig6.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Monthly Water Usage (Liters)'], mode='lines', name='Actual'))
+            fig6.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Predicted Usage'], mode='lines', name='Predicted'))
+            fig6.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
+            st.plotly_chart(fig6)
 
             # Saving data example
             if st.button("Save Data"):
-                household_data.to_csv('predicted_household_water_usage.csv')
+                household_data.to_csv('predicted_household_water_usage.csv', index=False)
                 st.write("Data saved to `predicted_household_water_usage.csv`")
         except Exception as e:
             st.error(f"An error occurred during prediction: {e}")
