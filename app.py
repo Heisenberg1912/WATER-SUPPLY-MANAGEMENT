@@ -143,7 +143,7 @@ elif selected == "Data":
 # Model page
 elif selected == "Model":
     st.title("Model Training and Prediction")
-    model_path = '/mnt/data/water_usage_model.h5'
+    model_path = 'water_usage_model.h5'
     preprocessor_path = 'preprocessor.pkl'
 
     # File upload widgets
