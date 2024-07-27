@@ -8,6 +8,7 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from streamlit_option_menu import option_menu
@@ -28,24 +29,9 @@ def generate_household_data(start_date, end_date):
         'Disparity in Supply (Yes/No)': np.random.choice(['Yes', 'No'], size=num_households),
         'Income Level': np.random.choice(['Low', 'Medium', 'High'], size=num_households),
         'Household Size': np.random.randint(1, 6, size=num_households),
-        'Avg Temp': np.random.rand(num_households) * 10 + 15,  # Simulated average temperature
         'Date': np.random.choice(dates, size=num_households)
     })
     return data
-
-# Create the preprocessor to ensure it produces exactly 7 features
-def create_preprocessor():
-    numeric_features = ['Household Size', 'Avg Temp']
-    categorical_features = ['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', StandardScaler(), numeric_features),
-            ('cat', OneHotEncoder(drop='first'), categorical_features)  # Drop first to avoid dummy variable trap
-        ], remainder='passthrough'
-    )
-
-    return preprocessor
 
 # Load pre-trained model and preprocessor
 @st.cache(allow_output_mutation=True, suppress_st_warning=True)
@@ -65,21 +51,14 @@ def load_model_and_preprocessor(model_file, preprocessor_file):
 # Ensure preprocessor is fitted correctly before transforming data
 @st.cache(allow_output_mutation=True)
 def fit_preprocessor(preprocessor, data):
-    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
+    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
     preprocessor.fit(features)
     return preprocessor
 
-# Debugging function to print preprocessed feature names and shapes
-def debug_preprocessor(preprocessor, data):
-    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
-    features_transformed = preprocessor.transform(features)
-    st.write("Shape of features after transformation:", features_transformed.shape)
-    return features_transformed
-
 # Navbar setup
 with st.sidebar:
-    selected = option_menu("Main Menu", ["Home", "Data", "Model", "Report Issue", "About"], 
-        icons=['house', 'database', 'gear', 'exclamation-circle', 'info'], menu_icon="cast", default_index=0)
+    selected = option_menu("Main Menu", ["Home", "Data", "Model", "About"], 
+        icons=['house', 'database', 'gear', 'info'], menu_icon="cast", default_index=0)
 
 # Home page
 if selected == "Home":
@@ -194,24 +173,20 @@ elif selected == "Model":
     # Example of model prediction
     def predict_usage(model, data):
         # Select relevant features for prediction
-        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
-        features_transformed = preprocessor.transform(features)
-        st.write("Shape of features after transformation:", features_transformed.shape)
-        prediction = model.predict(features_transformed)
+        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+        features = preprocessor.transform(features)
+        prediction = model.predict(features)
         return prediction.flatten()
 
     if st.button("Predict Usage"):
         try:
-            # Debugging: Verify input shape
-            features_transformed = debug_preprocessor(preprocessor, household_data)
-            
             prediction = predict_usage(model, household_data)
             household_data['Predicted Usage'] = prediction
 
             st.write("### Predicted Data", household_data)
 
             # Debugging: Print shapes and first few rows of actual and predicted usage
-            st.write("Shape of features:", features_transformed.shape)
+            st.write("Shape of features:", household_data.shape)
             st.write("Shape of predictions:", prediction.shape)
             st.write("First few rows of actual usage:")
             st.write(household_data['Monthly Water Usage (Liters)'].head())
@@ -231,35 +206,6 @@ elif selected == "Model":
                 st.write("Data saved to `predicted_household_water_usage.csv`")
         except Exception as e:
             st.error(f"An error occurred during prediction: {e}")
-
-# Report Issue page
-elif selected == "Report Issue":
-    st.title("Report a Water-Related Issue")
-
-    with st.form("report_issue_form"):
-        household_id = st.text_input("Household ID")
-        issue_type = st.selectbox("Type of Issue", ["Leakage", "No Supply", "Low Pressure", "Quality Issue", "Other"])
-        description = st.text_area("Description")
-        report_date = st.date_input("Date", datetime.now())
-        submit_button = st.form_submit_button("Submit Report")
-
-        if submit_button:
-            if not household_id or not issue_type or not description:
-                st.error("Please fill out all fields in the form.")
-            else:
-                # Save the report to a CSV file
-                report_data = {
-                    "Household ID": [household_id],
-                    "Issue Type": [issue_type],
-                    "Description": [description],
-                    "Date": [report_date]
-                }
-                report_df = pd.DataFrame(report_data)
-                if os.path.exists("issue_reports.csv"):
-                    report_df.to_csv("issue_reports.csv", mode='a', header=False, index=False)
-                else:
-                    report_df.to_csv("issue_reports.csv", index=False)
-                st.success("Issue reported successfully!")
 
 # About page
 elif selected == "About":
