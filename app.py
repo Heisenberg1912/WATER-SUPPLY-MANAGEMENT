@@ -1,13 +1,12 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import seaborn as sns
 import matplotlib.pyplot as plt
 from streamlit_option_menu import option_menu
 
 # Load the dataset
-file_path = 'indore_water_usage_data_difficult2.parquet'
+file_path = '/mnt/data/indore_water_usage_data_difficult2.parquet'
 household_data = pd.read_parquet(file_path)
 
 # Mapping of ward numbers to names
@@ -238,13 +237,13 @@ elif selected == "Map":
 
     # Create a new column to highlight disparity and leakage
     map_data['Disparity'] = map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
-    map_data['Leakage'] = map_data.apply(lambda x: 'Leakage' if x['Leakage Detected (Yes/No)'] == 'Yes' else 'No Leakage', axis=1)
+    map_data['Leakage'] = map_data.apply(lambda x: 10 if x['Leakage Detected (Yes/No)'] == 'Yes' else 5, axis=1)  # Use different sizes for leakage
 
     fig = px.scatter_mapbox(map_data, 
                             lat="Latitude", 
                             lon="Longitude", 
                             color="Disparity",
-                            symbol="Leakage",
+                            size="Leakage",
                             hover_name="Ward Name", 
                             hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
                             zoom=10, 
