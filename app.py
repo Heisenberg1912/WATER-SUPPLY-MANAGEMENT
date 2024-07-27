@@ -77,7 +77,11 @@ def generate_household_data(start_date, end_date):
         'Avg Temp': np.random.rand(num_households) * 10 + 15,  # Average temperature
         'Season': np.random.choice(['Spring', 'Summer', 'Winter'], size=num_households)
     })
-    data = pd.get_dummies(data, columns=['Season'], drop_first=True)  # One-hot encoding for categorical data
+    data = pd.get_dummies(data, columns=['Season'], drop_first=False)  # One-hot encoding for categorical data
+    # Ensure all expected columns are present
+    for col in ['Season_Spring', 'Season_Summer', 'Season_Winter']:
+        if col not in data.columns:
+            data[col] = 0
     return data
 
 # Update data based on selected date range
