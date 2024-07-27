@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from streamlit_option_menu import option_menu
 
 # Load the dataset
-file_path = 'indore_water_usage_data_difficult2.parquet'
+file_path = '/mnt/data/indore_water_usage_data_difficult2.parquet'
 household_data = pd.read_parquet(file_path)
 
 # Mapping of ward numbers to names
@@ -147,11 +147,15 @@ elif selected == "Map":
     # Filter data for the map
     map_data = household_data[['Ward Name', 'Latitude', 'Longitude', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)']].drop_duplicates()
 
+    # Create a new column to highlight disparity and leakage
+    map_data['Disparity'] = map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
+    map_data['Leakage'] = map_data.apply(lambda x: 'Leakage' if x['Leakage Detected (Yes/No)'] == 'Yes' else 'No Leakage', axis=1)
+
     fig = px.scatter_mapbox(map_data, 
                             lat="Latitude", 
                             lon="Longitude", 
-                            color="Leakage Detected (Yes/No)",
-                            size="Disparity in Supply (Yes/No)",
+                            color="Disparity",
+                            symbol="Leakage",
                             hover_name="Ward Name", 
                             hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
                             zoom=10, 
