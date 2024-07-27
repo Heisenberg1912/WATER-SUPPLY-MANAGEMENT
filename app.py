@@ -55,6 +55,15 @@ def fit_preprocessor(preprocessor, data):
     preprocessor.fit(features)
     return preprocessor
 
+# Debugging function to print preprocessed feature names and shapes
+def debug_preprocessor(preprocessor, data):
+    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+    features_transformed = preprocessor.transform(features)
+    feature_names = preprocessor.named_transformers_['cat'].get_feature_names_out()
+    st.write("Transformed feature names:", feature_names)
+    st.write("Shape of features after transformation:", features_transformed.shape)
+    return features_transformed
+
 # Navbar setup
 with st.sidebar:
     selected = option_menu("Main Menu", ["Home", "Data", "Model", "About"], 
@@ -174,24 +183,23 @@ elif selected == "Model":
     def predict_usage(model, data):
         # Select relevant features for prediction
         features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-        features = preprocessor.transform(features)
-        prediction = model.predict(features)
+        features_transformed = preprocessor.transform(features)
+        st.write("Shape of features after transformation:", features_transformed.shape)
+        prediction = model.predict(features_transformed)
         return prediction.flatten()
 
     if st.button("Predict Usage"):
         try:
-            # Verify input shape
-            features = household_data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-            features_transformed = preprocessor.transform(features)
-            st.write("Shape of features after transformation:", features_transformed.shape)
-
+            # Debugging: Verify input shape
+            features_transformed = debug_preprocessor(preprocessor, household_data)
+            
             prediction = predict_usage(model, household_data)
             household_data['Predicted Usage'] = prediction
 
             st.write("### Predicted Data", household_data)
 
             # Debugging: Print shapes and first few rows of actual and predicted usage
-            st.write("Shape of features:", features.shape)
+            st.write("Shape of features:", features_transformed.shape)
             st.write("Shape of predictions:", prediction.shape)
             st.write("First few rows of actual usage:")
             st.write(household_data['Monthly Water Usage (Liters)'].head())
