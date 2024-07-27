@@ -29,6 +29,7 @@ def generate_household_data(start_date, end_date):
         'Disparity in Supply (Yes/No)': np.random.choice(['Yes', 'No'], size=num_households),
         'Income Level': np.random.choice(['Low', 'Medium', 'High'], size=num_households),
         'Household Size': np.random.randint(1, 6, size=num_households),
+        'Avg Temp': np.random.rand(num_households) * 10 + 15,  # Simulated average temperature
         'Date': np.random.choice(dates, size=num_households)
     })
     return data
@@ -51,13 +52,13 @@ def load_model_and_preprocessor(model_file, preprocessor_file):
 # Ensure preprocessor is fitted correctly before transforming data
 @st.cache(allow_output_mutation=True)
 def fit_preprocessor(preprocessor, data):
-    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
     preprocessor.fit(features)
     return preprocessor
 
 # Debugging function to print preprocessed feature names and shapes
 def debug_preprocessor(preprocessor, data):
-    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
     features_transformed = preprocessor.transform(features)
     feature_names = preprocessor.named_transformers_['cat'].get_feature_names_out()
     st.write("Transformed feature names:", feature_names)
@@ -182,7 +183,7 @@ elif selected == "Model":
     # Example of model prediction
     def predict_usage(model, data):
         # Select relevant features for prediction
-        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
         features_transformed = preprocessor.transform(features)
         st.write("Shape of features after transformation:", features_transformed.shape)
         prediction = model.predict(features_transformed)
