@@ -102,26 +102,29 @@ if st.button("Update Data"):
 
     # Example of model prediction
     def predict_usage(model, data):
-        # Placeholder for actual model prediction
-        # Assuming the model takes 'Water Usage' as input and predicts future usage
-        prediction = model.predict(data[['Water Usage']])
-        return prediction
+        # Ensure the data has the correct shape
+        usage_data = data[['Water Usage']].values
+        prediction = model.predict(usage_data)
+        return prediction.flatten()
 
-    prediction = predict_usage(model, household_data)
-    household_data['Predicted Usage'] = prediction
+    try:
+        prediction = predict_usage(model, household_data)
+        household_data['Predicted Usage'] = prediction
 
-    st.write("### Predicted Data", household_data)
+        st.write("### Predicted Data", household_data)
 
-    # Interactive plot for predictions
-    fig4 = go.Figure()
-    fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Water Usage'], mode='lines', name='Actual'))
-    fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Predicted Usage'], mode='lines', name='Predicted'))
-    fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
-    st.plotly_chart(fig4)
+        # Interactive plot for predictions
+        fig4 = go.Figure()
+        fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Water Usage'], mode='lines', name='Actual'))
+        fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Predicted Usage'], mode='lines', name='Predicted'))
+        fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
+        st.plotly_chart(fig4)
 
-    # Saving data example
-    if st.button("Save Data"):
-        household_data.to_csv('predicted_household_water_usage.csv')
-        st.write("Data saved to `predicted_household_water_usage.csv`")
+        # Saving data example
+        if st.button("Save Data"):
+            household_data.to_csv('predicted_household_water_usage.csv')
+            st.write("Data saved to `predicted_household_water_usage.csv`")
+    except Exception as e:
+        st.error(f"An error occurred during prediction: {e}")
 else:
     st.write("Click the 'Update Data' button to generate data based on the selected date range.")
