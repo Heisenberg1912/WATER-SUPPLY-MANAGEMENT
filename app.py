@@ -12,6 +12,24 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from streamlit_option_menu import option_menu
 
+# Generate example household data
+@st.experimental_memo
+def generate_household_data(start_date, end_date):
+    np.random.seed(42)  # For reproducible results
+    num_households = 100
+    dates = pd.date_range(start=start_date, end=end_date)
+    data = pd.DataFrame({
+        'Date': np.random.choice(dates, size=num_households),
+        'Household ID': np.arange(1, num_households + 1),
+        'Received Water': np.random.choice([True, False], size=num_households, p=[0.8, 0.2]),
+        'Water Usage': np.random.rand(num_households) * 150,
+        'Water Limit': np.random.choice([100, 150, 200], size=num_households),
+        'Household Size': np.random.randint(1, 6, size=num_households),
+        'Num Days No Water': np.random.randint(0, 30, size=num_households),
+        'Avg Temp': np.random.rand(num_households) * 10 + 15  # Average temperature
+    })
+    return data
+
 # Function to create and train a new model
 def create_and_train_model(data):
     features = data[['Household Size', 'Num Days No Water', 'Avg Temp']].values
@@ -69,24 +87,6 @@ elif selected == "Data":
         start_date = datetime.now() - timedelta(days=365)
 
     end_date = datetime.now()
-
-    # Generate example household data
-    @st.experimental_memo
-    def generate_household_data(start_date, end_date):
-        np.random.seed(42)  # For reproducible results
-        num_households = 100
-        dates = pd.date_range(start=start_date, end=end_date)
-        data = pd.DataFrame({
-            'Date': np.random.choice(dates, size=num_households),
-            'Household ID': np.arange(1, num_households + 1),
-            'Received Water': np.random.choice([True, False], size=num_households, p=[0.8, 0.2]),
-            'Water Usage': np.random.rand(num_households) * 150,
-            'Water Limit': np.random.choice([100, 150, 200], size=num_households),
-            'Household Size': np.random.randint(1, 6, size=num_households),
-            'Num Days No Water': np.random.randint(0, 30, size=num_households),
-            'Avg Temp': np.random.rand(num_households) * 10 + 15  # Average temperature
-        })
-        return data
 
     # Update data based on selected date range
     if st.button("Update Data"):
