@@ -180,13 +180,18 @@ elif selected == "Model":
 
     if st.button("Predict Usage"):
         try:
+            # Verify input shape
+            features = household_data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+            features_transformed = preprocessor.transform(features)
+            st.write("Shape of features after transformation:", features_transformed.shape)
+
             prediction = predict_usage(model, household_data)
             household_data['Predicted Usage'] = prediction
 
             st.write("### Predicted Data", household_data)
 
             # Debugging: Print shapes and first few rows of actual and predicted usage
-            st.write("Shape of features:", household_data.shape)
+            st.write("Shape of features:", features.shape)
             st.write("Shape of predictions:", prediction.shape)
             st.write("First few rows of actual usage:")
             st.write(household_data['Monthly Water Usage (Liters)'].head())
