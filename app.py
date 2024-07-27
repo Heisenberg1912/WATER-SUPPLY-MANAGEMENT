@@ -43,16 +43,9 @@ def load_model_and_preprocessor(model_file, preprocessor_file):
     
     try:
         preprocessor = joblib.load(preprocessor_file)
-    except:
-        # Define preprocessor again in case the file is not found
-        categorical_features = ['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']
-        numeric_features = ['Household Size']
+    except Exception as e:
+        return None, None, f"Failed to load preprocessor: {str(e)}"
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ('num', StandardScaler(), numeric_features),
-                ('cat', OneHotEncoder(), categorical_features)
-            ])
     return model, preprocessor, None
 
 # Ensure preprocessor is fitted correctly before transforming data
@@ -191,6 +184,14 @@ elif selected == "Model":
             household_data['Predicted Usage'] = prediction
 
             st.write("### Predicted Data", household_data)
+
+            # Debugging: Print shapes and first few rows of actual and predicted usage
+            st.write("Shape of features:", household_data.shape)
+            st.write("Shape of predictions:", prediction.shape)
+            st.write("First few rows of actual usage:")
+            st.write(household_data['Monthly Water Usage (Liters)'].head())
+            st.write("First few rows of predicted usage:")
+            st.write(prediction[:5])
 
             # Interactive plot for predictions
             fig4 = go.Figure()
