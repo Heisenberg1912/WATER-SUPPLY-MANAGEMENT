@@ -7,14 +7,42 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
-# Function to load the model, using st.experimental_singleton to cache it
+# Function to create and train a new model
+def create_and_train_model(data):
+    features = data[['Water Usage', 'Household Size', 'Num Days No Water', 'Avg Temp']].values
+    target = data['Water Usage'].values
+
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(1)
+    ])
+
+    model.compile(optimizer='adam', loss='mse')
+    model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+
+    return model, scaler
+
+# Function to load or create the model
 @st.experimental_singleton
-def load_model():
-    model = tf.keras.models.load_model('water_usage_model.h5')  # Use the specified model file
-    return model
-
-model = load_model()
+def load_or_create_model(data):
+    try:
+        model = tf.keras.models.load_model('water_usage_model.h5')
+        scaler = joblib.load('scaler.pkl')
+    except:
+        model, scaler = create_and_train_model(data)
+        model.save('water_usage_model.h5')
+        joblib.dump(scaler, 'scaler.pkl')
+    return model, scaler
 
 # Example of adding a title and some Streamlit components
 st.title("Water Supply Management")
@@ -45,10 +73,8 @@ def generate_household_data(start_date, end_date):
         'Water Limit': np.random.choice([100, 150, 200], size=num_households),
         'Household Size': np.random.randint(1, 6, size=num_households),
         'Num Days No Water': np.random.randint(0, 30, size=num_households),
-        'Avg Temp': np.random.rand(num_households) * 10 + 15,  # Average temperature
-        'Season': np.random.choice(['Winter', 'Spring', 'Summer', 'Autumn'], size=num_households)
+        'Avg Temp': np.random.rand(num_households) * 10 + 15  # Average temperature
     })
-    data = pd.get_dummies(data, columns=['Season'])  # One-hot encoding for categorical data
     return data
 
 # Update data based on selected date range
@@ -105,10 +131,14 @@ if st.button("Update Data"):
     sns.heatmap(heatmap_data, ax=ax3, cmap='viridis')
     st.pyplot(fig3)
 
+    # Load or create model
+    model, scaler = load_or_create_model(household_data)
+
     # Example of model prediction
     def predict_usage(model, data):
         # Ensure the data has the correct shape
-        features = data[['Water Usage', 'Household Size', 'Num Days No Water', 'Avg Temp', 'Season_Autumn', 'Season_Spring', 'Season_Summer', 'Season_Winter']]
+        features = data[['Water Usage', 'Household Size', 'Num Days No Water', 'Avg Temp']].values
+        features = scaler.transform(features)
         prediction = model.predict(features)
         return prediction.flatten()
 
