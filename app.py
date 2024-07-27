@@ -33,9 +33,9 @@ def generate_household_data(start_date, end_date):
     return data
 
 # Load pre-trained model and preprocessor
-@st.cache_resource
+@st.cache(allow_output_mutation=True)
 def load_model_and_preprocessor():
-    model = tf.keras.models.load_model('/mnt/data/water_usage_model.h5')
+    model = tf.keras.models.load_model('water_usage_model.h5')
     # Assuming preprocessor.pkl is in the same directory as the script
     try:
         preprocessor = joblib.load('preprocessor.pkl')
