@@ -1,18 +1,14 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-import joblib
+import pycaret.regression as pyreg
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
 from streamlit_option_menu import option_menu
-import os
 
 # Generate example household data
 @st.experimental_memo
@@ -32,35 +28,6 @@ def generate_household_data(start_date, end_date):
         'Date': np.random.choice(dates, size=num_households)
     })
     return data
-
-# Load pre-trained model and preprocessor
-@st.cache(allow_output_mutation=True, suppress_st_warning=True)
-def load_model_and_preprocessor(model_file, preprocessor_file):
-    try:
-        model = tf.keras.models.load_model(model_file)
-    except Exception as e:
-        return None, None, f"Failed to load model: {str(e)}"
-    
-    try:
-        preprocessor = joblib.load(preprocessor_file)
-    except:
-        # Define preprocessor again in case the file is not found
-        categorical_features = ['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']
-        numeric_features = ['Household Size']
-
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ('num', StandardScaler(), numeric_features),
-                ('cat', OneHotEncoder(), categorical_features)
-            ])
-    return model, preprocessor, None
-
-# Ensure preprocessor is fitted correctly before transforming data
-@st.cache(allow_output_mutation=True)
-def fit_preprocessor(preprocessor, data):
-    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-    preprocessor.fit(features)
-    return preprocessor
 
 # Navbar setup
 with st.sidebar:
@@ -143,68 +110,52 @@ elif selected == "Data":
 # Model page
 elif selected == "Model":
     st.title("Model Training and Prediction")
-    model_path = 'water_usage_model.h5'
-    preprocessor_path = 'preprocessor.pkl'
+    date_option = st.selectbox("Select date range for training", ["1 month", "6 months", "1 year"])
 
-    # File upload widgets
-    model_file = st.file_uploader("Upload the model file (water_usage_model.h5)", type=["h5"])
-    preprocessor_file = st.file_uploader("Upload the preprocessor file (preprocessor.pkl)", type=["pkl"])
+    if date_option == "1 month":
+        start_date = datetime.now() - timedelta(days=30)
+    elif date_option == "6 months":
+        start_date = datetime.now() - timedelta(days=182)
+    elif date_option == "1 year":
+        start_date = datetime.now() - timedelta(days=365)
 
-    if model_file is not None:
-        with open(model_path, "wb") as f:
-            f.write(model_file.getbuffer())
+    end_date = datetime.now()
+    
+    # Generate data
+    household_data = generate_household_data(start_date, end_date)
 
-    if preprocessor_file is not None:
-        with open(preprocessor_path, "wb") as f:
-            f.write(preprocessor_file.getbuffer())
+    # PyCaret setup and model training
+    st.write("### Training Model")
+    if st.button("Train Model"):
+        pycaret_setup = pyreg.setup(data=household_data, target='Monthly Water Usage (Liters)', silent=True, session_id=123)
+        best_model = pyreg.compare_models()
 
-    # Check if model and preprocessor files exist
-    if not os.path.exists(model_path):
-        st.error("Model file not found. Please upload the model file to the correct path.")
-        st.stop()
+        st.write("### Best Model")
+        st.write(best_model)
 
-    if not os.path.exists(preprocessor_path):
-        st.error("Preprocessor file not found. Please upload the preprocessor file to the correct path.")
-        st.stop()
+        # Save model
+        pyreg.save_model(best_model, 'best_water_usage_model')
 
-    # Load pre-trained model and preprocessor
-    model, preprocessor, error_message = load_model_and_preprocessor(model_path, preprocessor_path)
-    if error_message:
-        st.error(error_message)
-        st.stop()
-
-    # Ensure preprocessor is fitted correctly
-    household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
-    preprocessor = fit_preprocessor(preprocessor, household_data)
-
-    # Example of model prediction
-    def predict_usage(model, data):
-        # Select relevant features for prediction
-        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-        features = preprocessor.transform(features)
-        prediction = model.predict(features)
-        return prediction.flatten()
-
+    # Load model and make predictions
+    st.write("### Predict Water Usage")
     if st.button("Predict Usage"):
-        try:
-            prediction = predict_usage(model, household_data)
-            household_data['Predicted Usage'] = prediction
+        best_model = pyreg.load_model('best_water_usage_model')
+        predictions = pyreg.predict_model(best_model, data=household_data)
+        household_data['Predicted Usage'] = predictions['Label']
 
-            st.write("### Predicted Data", household_data)
+        st.write("### Predicted Data", household_data)
 
-            # Interactive plot for predictions
-            fig4 = go.Figure()
-            fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Monthly Water Usage (Liters)'], mode='lines', name='Actual'))
-            fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Predicted Usage'], mode='lines', name='Predicted'))
-            fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
-            st.plotly_chart(fig4)
+        # Interactive plot for predictions
+        fig4 = go.Figure()
+        fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Monthly Water Usage (Liters)'], mode='lines', name='Actual'))
+        fig4.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Predicted Usage'], mode='lines', name='Predicted'))
+        fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
+        st.plotly_chart(fig4)
 
-            # Saving data example
-            if st.button("Save Data"):
-                household_data.to_csv('predicted_household_water_usage.csv')
-                st.write("Data saved to `predicted_household_water_usage.csv`")
-        except Exception as e:
-            st.error(f"An error occurred during prediction: {e}")
+        # Saving data example
+        if st.button("Save Data"):
+            household_data.to_csv('predicted_household_water_usage.csv')
+            st.write("Data saved to `predicted_household_water_usage.csv`")
 
 # About page
 elif selected == "About":
