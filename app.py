@@ -148,7 +148,7 @@ st.markdown(
     /* Watermark on main content */
     .main::before {
         content: "";
-        background: url('Emblem_of_IMC_Indore.jpg');  /* Use the uploaded logo path */
+        background: url('1.png');  /* Use the uploaded logo path */
         opacity: 0.1;
         top: 50%;
         left: 50%;
@@ -166,7 +166,7 @@ st.markdown(
 
 # Navbar setup
 with st.sidebar:
-    st.image('Emblem_of_IMC_Indore.jpg', width=200)  # Use the uploaded logo path
+    st.image('1.png', width=200)  # Use the uploaded logo path
     selected = option_menu("Main Menu", ["Home", "Data", "Map", "About"], 
         icons=['house', 'database', 'map', 'info'], menu_icon="cast", default_index=0)
 
