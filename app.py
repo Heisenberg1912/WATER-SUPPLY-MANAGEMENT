@@ -7,7 +7,6 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from sklearn.model_selection import train_test_split
 from streamlit_option_menu import option_menu
 
 # Generate example household data
@@ -160,4 +159,4 @@ elif selected == "Model":
 # About page
 elif selected == "About":
     st.title("About")
-    st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict future water usage based on various factors such as household size, days without water, and average temperature. The data is visualized using interactive plots for better understanding and decision making.")
+    st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict
