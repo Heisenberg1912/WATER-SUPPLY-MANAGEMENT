@@ -37,7 +37,7 @@ household_data['Ward Name'] = household_data['Ward'].map(ward_names)
 
 # Add latitude and longitude for each ward (these are made-up coordinates for demonstration purposes)
 ward_coords = {
-    'Sirapur': (22.7196, 75.8577),
+   'Sirapur': (22.7196, 75.8577),
     'Chandan Nagar': (22.7242, 75.8648),
     'Kaalaani Nagar': (22.7324, 75.8765),
     'Sukhadev Nagar': (22.7292, 75.8744),
@@ -131,16 +131,21 @@ household_data['Longitude'] = household_data['Ward Name'].map(lambda x: ward_coo
 map_data = household_data.dropna(subset=['Latitude', 'Longitude'])
 map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
-# Custom CSS for background colors
+# Custom CSS for background colors and watermark
 st.markdown(
-    
+    """
     <style>
+    /* Sidebar background color */
     .css-1d391kg {
         background-color: #126962 !important;
     }
+    
+    /* Main content background color */
     .css-18e3th9 {
         background-color: #007f7f !important;
     }
+    
+    /* Watermark on main content */
     .main::before {
         content: "";
         background: url('Emblem_of_IMC_Indore.jpg');  /* Use the uploaded logo path */
@@ -155,7 +160,7 @@ st.markdown(
         z-index: -1;
     }
     </style>
-    ,
+    """,
     unsafe_allow_html=True
 )
 
