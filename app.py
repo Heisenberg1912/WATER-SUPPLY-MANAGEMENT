@@ -37,7 +37,7 @@ household_data['Ward Name'] = household_data['Ward'].map(ward_names)
 
 # Add latitude and longitude for each ward (these are made-up coordinates for demonstration purposes)
 ward_coords = {
-  
+    
 'Sirapur': (22.7196, 75.8577),
     'Chandan Nagar': (22.7242, 75.8648),
     'Kaalaani Nagar': (22.7324, 75.8765),
