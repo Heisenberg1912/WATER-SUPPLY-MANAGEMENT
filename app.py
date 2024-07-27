@@ -34,16 +34,16 @@ def generate_household_data(start_date, end_date):
     return data
 
 # Load pre-trained model and preprocessor
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, suppress_st_warning=True)
 def load_model_and_preprocessor():
-    model_path = 'water_usage_model.h5'
-    if os.path.exists(model_path):
-        model = tf.keras.models.load_model(model_path)
-    else:
-        st.error("Model file not found. Please upload the model file to the correct path.")
-        return None, None
-
+    model_path = '/mnt/data/water_usage_model.h5'
     preprocessor_path = 'preprocessor.pkl'
+
+    if not os.path.exists(model_path):
+        return None, None, "Model file not found. Please upload the model file to the correct path."
+    
+    model = tf.keras.models.load_model(model_path)
+    
     if os.path.exists(preprocessor_path):
         preprocessor = joblib.load(preprocessor_path)
     else:
@@ -56,7 +56,7 @@ def load_model_and_preprocessor():
                 ('num', StandardScaler(), numeric_features),
                 ('cat', OneHotEncoder(), categorical_features)
             ])
-    return model, preprocessor
+    return model, preprocessor, None
 
 # Ensure preprocessor is fitted correctly before transforming data
 @st.cache(allow_output_mutation=True)
@@ -146,9 +146,22 @@ elif selected == "Data":
 # Model page
 elif selected == "Model":
     st.title("Model Training and Prediction")
+    model_path = 'water_usage_model.h5'
+    preprocessor_path = 'preprocessor.pkl'
+
+    # Check if model and preprocessor files exist
+    if not os.path.exists(model_path):
+        st.error("Model file not found. Please upload the model file to the correct path.")
+        st.stop()
+
+    if not os.path.exists(preprocessor_path):
+        st.error("Preprocessor file not found. Please upload the preprocessor file to the correct path.")
+        st.stop()
+
     # Load pre-trained model and preprocessor
-    model, preprocessor = load_model_and_preprocessor()
-    if model is None or preprocessor is None:
+    model, preprocessor, error_message = load_model_and_preprocessor()
+    if error_message:
+        st.error(error_message)
         st.stop()
 
     # Ensure preprocessor is fitted correctly
