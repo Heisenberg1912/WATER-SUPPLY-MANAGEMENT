@@ -37,7 +37,7 @@ household_data['Ward Name'] = household_data['Ward'].map(ward_names)
 
 # Add latitude and longitude for each ward (these are made-up coordinates for demonstration purposes)
 ward_coords = {
-    'Sirapur': (22.7196, 75.8577),
+      'Sirapur': (22.7196, 75.8577),
     'Chandan Nagar': (22.7242, 75.8648),
     'Kaalaani Nagar': (22.7324, 75.8765),
     'Sukhadev Nagar': (22.7292, 75.8744),
@@ -131,20 +131,19 @@ household_data['Longitude'] = household_data['Ward Name'].map(lambda x: ward_coo
 map_data = household_data.dropna(subset=['Latitude', 'Longitude'])
 map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
-# Display logo at the top
-logo_path = 'Emblem_of_IMC_Indore.jpg'  # Replace with your logo path or URL
-st.image(logo_path, width=200)
+# Navbar setup
+with st.sidebar:
+    st.image('Emblem_of_IMC_Indore.jpg', width=200)  # Replace with your logo path or URL
+    selected = option_menu("Main Menu", ["Home", "Data", "Map", "About"], 
+        icons=['house', 'database', 'map', 'info'], menu_icon="cast", default_index=0)
 
 # Add CSS for watermark
 st.markdown(
     """
     <style>
-    .main {
-        position: relative;
-    }
-    .main::after {
+    .main::before {
         content: "";
-        background: url('path_to_your_logo.png');  /* Replace with your logo path or URL */
+        background: url('Emblem_of_IMC_Indore.jpg');  /* Replace with your logo path or URL */
         opacity: 0.1;
         top: 50%;
         left: 50%;
@@ -159,11 +158,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-# Navbar setup
-with st.sidebar:
-    selected = option_menu("Main Menu", ["Home", "Data", "Map", "About"], 
-        icons=['house', 'database', 'map', 'info'], menu_icon="cast", default_index=0)
 
 # Home page
 if selected == "Home":
