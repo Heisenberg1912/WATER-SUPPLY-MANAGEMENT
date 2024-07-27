@@ -131,37 +131,39 @@ if uploaded_file is not None:
                 median_usage = data_filtered['Water Usage'].median()
                 std_usage = data_filtered['Water Usage'].std()
 
-                st.write(f"**Total households**: {total_households}")
-                st.write(f"**Households receiving water**: {households_receiving_water}")
-                st.write(f"**Households not receiving water**: {households_not_receiving_water}")
-                st.write(f"**Households using water within limit**: {used_within_limit}")
-                st.write(f"**Households wasting water beyond limit**: {wasted_beyond_limit}")
-                st.write(f"**Total water usage (liters)**: {total_usage:.2f}")
-                st.write(f"**Total water wasted (liters)**: {total_wasted:.2f}")
-                st.write(f"**Mean water usage (liters)**: {mean_usage:.2f}")
-                st.write(f"**Median water usage (liters)**: {median_usage:.2f}")
-                st.write(f"**Standard deviation of water usage (liters)**: {std_usage:.2f}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Total households**: {total_households}")
+                    st.write(f"**Households receiving water**: {households_receiving_water}")
+                    st.write(f"**Households not receiving water**: {households_not_receiving_water}")
+                    st.write(f"**Households using water within limit**: {used_within_limit}")
+                    st.write(f"**Households wasting water beyond limit**: {wasted_beyond_limit}")
+                    st.write(f"**Total water usage (liters)**: {total_usage:.2f}")
+                    st.write(f"**Total water wasted (liters)**: {total_wasted:.2f}")
+                    st.write(f"**Mean water usage (liters)**: {mean_usage:.2f}")
+                    st.write(f"**Median water usage (liters)**: {median_usage:.2f}")
+                    st.write(f"**Standard deviation of water usage (liters)**: {std_usage:.2f}")
 
-                # Interactive bar plot
-                fig = px.bar(
-                    x=['Receiving Water', 'Not Receiving Water'], 
-                    y=[households_receiving_water, households_not_receiving_water],
-                    labels={'x': 'Household Status', 'y': 'Number of Households'},
-                    title='Households Receiving vs. Not Receiving Water'
-                )
-                st.plotly_chart(fig)
+                with col2:
+                    fig = px.bar(
+                        x=['Receiving Water', 'Not Receiving Water'], 
+                        y=[households_receiving_water, households_not_receiving_water],
+                        labels={'x': 'Household Status', 'y': 'Number of Households'},
+                        title='Households Receiving vs. Not Receiving Water'
+                    )
+                    st.plotly_chart(fig)
 
-                fig2 = px.bar(
-                    x=['Within Limit', 'Beyond Limit'], 
-                    y=[used_within_limit, wasted_beyond_limit],
-                    labels={'x': 'Usage Status', 'y': 'Number of Households'},
-                    title='Households Using Water Within Limit vs. Beyond Limit'
-                )
-                st.plotly_chart(fig2)
+                    fig2 = px.bar(
+                        x=['Within Limit', 'Beyond Limit'], 
+                        y=[used_within_limit, wasted_beyond_limit],
+                        labels={'x': 'Usage Status', 'y': 'Number of Households'},
+                        title='Households Using Water Within Limit vs. Beyond Limit'
+                    )
+                    st.plotly_chart(fig2)
 
                 # Heatmap for water usage
-                heatmap_data = data_filtered.pivot_table(values='Water Usage', index='Household ID', columns='Date', fill_value=0)
                 fig3, ax3 = plt.subplots(figsize=(10, 8))
+                heatmap_data = data_filtered.pivot_table(values='Water Usage', index='Household ID', columns='Date', fill_value=0)
                 sns.heatmap(heatmap_data, ax=ax3, cmap='viridis')
                 st.pyplot(fig3)
 
