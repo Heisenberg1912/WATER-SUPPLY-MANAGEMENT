@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 # Function to load the model, using st.experimental_singleton to cache it
 @st.experimental_singleton
 def load_model():
-    model = tf.keras.models.load_model('path_to_model')  # Replace 'path_to_model' with your model path
+    model = tf.keras.models.load_model('water_usage_model.h5')  # Replace 'path_to_model' with your model path
     return model
 
 model = load_model()
