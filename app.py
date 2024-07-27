@@ -131,19 +131,19 @@ household_data['Longitude'] = household_data['Ward Name'].map(lambda x: ward_coo
 map_data = household_data.dropna(subset=['Latitude', 'Longitude'])
 map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
-# Custom CSS for background colors and watermark
+# Custom CSS for background colors
 st.markdown(
     """
     <style>
     .css-1d391kg {
-        background-color: #126962;
+        background-color: #126962 !important;
     }
     .css-18e3th9 {
-        background-color: #007f7f;
+        background-color: #007f7f !important;
     }
     .main::before {
         content: "";
-        background: url('/mnt/data/Emblem_of_IMC_Indore.jpg');  /* Use the uploaded logo */
+        background: url('Emblem_of_IMC_Indore.jpg');  /* Use the uploaded logo path */
         opacity: 0.1;
         top: 50%;
         left: 50%;
@@ -161,7 +161,7 @@ st.markdown(
 
 # Navbar setup
 with st.sidebar:
-    st.image('/mnt/data/Emblem_of_IMC_Indore.jpg', width=200)  # Use the uploaded logo
+    st.image('Emblem_of_IMC_Indore.jpg', width=200)  # Use the uploaded logo path
     selected = option_menu("Main Menu", ["Home", "Data", "Map", "About"], 
         icons=['house', 'database', 'map', 'info'], menu_icon="cast", default_index=0)
 
@@ -214,4 +214,81 @@ elif selected == "Data":
         st.write(f"**Total households in Ward {selected_ward}**: {total_households}")
         st.write(f"**Households receiving water**: {households_receiving_water}")
         st.write(f"**Households not receiving water**: {households_not_receiving_water}")
-        st.write(f
+        st.write(f"**Households using water within limit**: {used_within_limit}")
+        st.write(f"**Households wasting water beyond limit**: {wasted_beyond_limit}")
+        st.write(f"**Total water usage (liters)**: {total_usage:.2f}")
+        st.write(f"**Total water wasted (liters)**: {total_wasted:.2f}")
+        st.write(f"**Mean water usage (liters)**: {mean_usage:.2f}")
+        st.write(f"**Median water usage (liters)**: {median_usage:.2f}")
+        st.write(f"**Standard deviation of water usage (liters)**: {std_usage:.2f}")
+
+        # Interactive bar plot
+        fig = px.bar(
+            x=['Receiving Water', 'Not Receiving Water'], 
+            y=[households_receiving_water, households_not_receiving_water],
+            labels={'x': 'Household Status', 'y': 'Number of Households'},
+            title=f'Households Receiving vs. Not Receiving Water in Ward {selected_ward}'
+        )
+        st.plotly_chart(fig)
+
+        fig2 = px.bar(
+            x=['Within Limit', 'Beyond Limit'], 
+            y=[used_within_limit, wasted_beyond_limit],
+            labels={'x': 'Usage Status', 'y': 'Number of Households'},
+            title=f'Households Using Water Within Limit vs. Beyond Limit in Ward {selected_ward}'
+        )
+        st.plotly_chart(fig2)
+
+        # Additional graphs
+        # Water usage distribution
+        fig3 = px.histogram(ward_data, x='Monthly Water Usage (Liters)', nbins=20, title=f'Water Usage Distribution in Ward {selected_ward}')
+        st.plotly_chart(fig3)
+
+        # Box plot for water usage by income level
+        fig4 = px.box(ward_data, x='Income Level', y='Monthly Water Usage (Liters)', title=f'Water Usage by Income Level in Ward {selected_ward}')
+        st.plotly_chart(fig4)
+
+        # Heatmap for water usage
+        heatmap_data = ward_data.pivot_table(values='Monthly Water Usage (Liters)', index='Household ID', columns='Date', fill_value=0)
+        fig5, ax5 = plt.subplots(figsize=(10, 8))
+        sns.heatmap(heatmap_data, ax=ax5, cmap='viridis')
+        st.pyplot(fig5)
+
+# Map page
+elif selected == "Map":
+    st.title("Ward Map Overview")
+    st.write("This map highlights wards with water disparity and leakage detection issues.")
+    
+    # Filter data for the map
+    map_data = household_data[['Ward Name', 'Latitude', 'Longitude', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)']].drop_duplicates()
+    map_data = map_data.dropna(subset=['Latitude', 'Longitude'])
+    map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
+
+    wards = map_data['Ward Name'].unique()
+    selected_ward = st.selectbox("Select Ward", sorted(wards))
+
+    if selected_ward:
+        # Filter map data based on selected ward
+        ward_map_data = map_data[map_data['Ward Name'] == selected_ward]
+
+        # Create a new column to highlight disparity and leakage
+        ward_map_data['Disparity'] = ward_map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
+        ward_map_data['Leakage'] = ward_map_data.apply(lambda x: 10 if x['Leakage Detected (Yes/No)'] == 'Yes' else 5, axis=1)  # Use different sizes for leakage
+
+        fig = px.scatter_mapbox(ward_map_data, 
+                                lat="Latitude", 
+                                lon="Longitude", 
+                                color="Disparity",
+                                size="Leakage",
+                                hover_name="Ward Name", 
+                                hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
+                                zoom=10, 
+                                height=600)
+        fig.update_layout(mapbox_style="open-street-map")
+        fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+        st.plotly_chart(fig)
+
+# About page
+elif selected == "About":
+    st.title("About")
+    st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict future water usage based on various factors such as household size, days without water, and average temperature. The data is visualized using interactive plots for better understanding and decision making.")
