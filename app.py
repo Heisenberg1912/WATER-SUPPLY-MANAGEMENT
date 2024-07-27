@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-# List of wards
+# List of wards with ward numbers
 wards = [
     "Sirapur", "Chandan Nagar", "Kaalaani Nagar", "Sukhadev Nagar", "Raaj Nagar", "Malhaaraganj",
     "Janata Colony", "Joona Risaala", "Vrindaavan", "Baanaganga", "Bhaageerathpura", "Govind Colony",
@@ -31,6 +31,9 @@ wards = [
     "Sukhniwas", "Dr Rajendra Prasaad", "Annapurna", "Sudaama Nagar", "Gumaastaa Nagar", 
     "Dawaarkapuri", "Prajaapat Nagar"
 ]
+ward_numbers = list(range(1, 86))
+
+ward_mapping = dict(zip(wards, ward_numbers))
 
 # Function to create and train a new model
 def create_and_train_model(data):
@@ -83,6 +86,14 @@ end_date = datetime.now()
 
 # Ward selection
 selected_ward = st.selectbox("Select Ward", wards)
+selected_ward_number = ward_mapping[selected_ward]
+
+# Load uploaded data
+data_path = '/mnt/data/indore_water_usage_data_difficult.parquet'
+data = pd.read_parquet(data_path)
+
+# Filter data for the selected ward
+data = data[data['Ward'] == selected_ward_number]
 
 # Generate example household data
 @st.experimental_memo
@@ -111,7 +122,7 @@ def generate_household_data(start_date, end_date):
 # Update data based on selected date range
 if st.button("Update Data"):
     household_data = generate_household_data(start_date, end_date)
-    st.write(f"### Household Data for {selected_ward} Ward", household_data)
+    st.write(f"### Household Data for {selected_ward} Ward (Ward Number {selected_ward_number})", household_data)
 
     # Calculate statistics
     total_households = len(household_data)
