@@ -94,8 +94,9 @@ uploaded_file = st.file_uploader("Upload Parquet File", type=["parquet"])
 if uploaded_file is not None:
     data = pd.read_parquet(uploaded_file)
 
-    # Display the columns of the dataframe to inspect available data
+    # Display the columns and first few rows of the dataframe to inspect available data
     st.write("### Data Columns", data.columns)
+    st.write("### First Few Rows of Data", data.head())
 
     # Filter data for the selected ward
     if 'Ward' in data.columns:
@@ -116,20 +117,20 @@ if uploaded_file is not None:
             st.write(f"### Household Data for {selected_ward} Ward (Ward Number {selected_ward_number})", data_filtered)
 
             # Calculate statistics
-            if 'Received Water' in data_filtered.columns and 'Water Usage' in data_filtered.columns and 'Water Limit' in data_filtered.columns:
+            if 'Received_Water' in data_filtered.columns and 'Water_Usage' in data_filtered.columns and 'Water_Limit' in data_filtered.columns:
                 total_households = len(data_filtered)
-                households_receiving_water = data_filtered['Received Water'].sum()
+                households_receiving_water = data_filtered['Received_Water'].sum()
                 households_not_receiving_water = total_households - households_receiving_water
 
-                used_within_limit = (data_filtered['Water Usage'] <= data_filtered['Water Limit']).sum()
-                wasted_beyond_limit = (data_filtered['Water Usage'] > data_filtered['Water Limit']).sum()
+                used_within_limit = (data_filtered['Water_Usage'] <= data_filtered['Water_Limit']).sum()
+                wasted_beyond_limit = (data_filtered['Water_Usage'] > data_filtered['Water_Limit']).sum()
 
-                total_usage = data_filtered['Water Usage'].sum()
-                total_wasted = data_filtered.loc[data_filtered['Water Usage'] > data_filtered['Water Limit'], 'Water Usage'].sum() - data_filtered.loc[data_filtered['Water Usage'] > data_filtered['Water Limit'], 'Water Limit'].sum()
+                total_usage = data_filtered['Water_Usage'].sum()
+                total_wasted = data_filtered.loc[data_filtered['Water_Usage'] > data_filtered['Water_Limit'], 'Water_Usage'].sum() - data_filtered.loc[data_filtered['Water_Usage'] > data_filtered['Water_Limit'], 'Water_Limit'].sum()
 
-                mean_usage = data_filtered['Water Usage'].mean()
-                median_usage = data_filtered['Water Usage'].median()
-                std_usage = data_filtered['Water Usage'].std()
+                mean_usage = data_filtered['Water_Usage'].mean()
+                median_usage = data_filtered['Water_Usage'].median()
+                std_usage = data_filtered['Water_Usage'].std()
 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -163,7 +164,7 @@ if uploaded_file is not None:
 
                 # Heatmap for water usage
                 fig3, ax3 = plt.subplots(figsize=(10, 8))
-                heatmap_data = data_filtered.pivot_table(values='Water Usage', index='Household ID', columns='Date', fill_value=0)
+                heatmap_data = data_filtered.pivot_table(values='Water_Usage', index='Household_ID', columns='Date', fill_value=0)
                 sns.heatmap(heatmap_data, ax=ax3, cmap='viridis')
                 st.pyplot(fig3)
 
@@ -173,21 +174,21 @@ if uploaded_file is not None:
                 # Example of model prediction
                 def predict_usage(model, data):
                     # Ensure the data has the correct shape
-                    features = data[['Household Size', 'Num Days No Water', 'Avg Temp', 'Season_Spring', 'Season_Summer']].values
+                    features = data[['Household_Size', 'Num_Days_No_Water', 'Avg_Temp', 'Season_Spring', 'Season_Summer']].values
                     features = scaler.transform(features)
                     prediction = model.predict(features)
                     return prediction.flatten()
 
                 try:
                     prediction = predict_usage(model, data_filtered)
-                    data_filtered['Predicted Usage'] = prediction
+                    data_filtered['Predicted_Usage'] = prediction
 
                     st.write("### Predicted Data", data_filtered)
 
                     # Interactive plot for predictions
                     fig4 = go.Figure()
-                    fig4.add_trace(go.Scatter(x=data_filtered['Household ID'], y=data_filtered['Water Usage'], mode='lines', name='Actual'))
-                    fig4.add_trace(go.Scatter(x=data_filtered['Household ID'], y=data_filtered['Predicted Usage'], mode='lines', name='Predicted'))
+                    fig4.add_trace(go.Scatter(x=data_filtered['Household_ID'], y=data_filtered['Water_Usage'], mode='lines', name='Actual'))
+                    fig4.add_trace(go.Scatter(x=data_filtered['Household_ID'], y=data_filtered['Predicted_Usage'], mode='lines', name='Predicted'))
                     fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
                     st.plotly_chart(fig4)
 
@@ -198,7 +199,7 @@ if uploaded_file is not None:
                 except Exception as e:
                     st.error(f"An error occurred during prediction: {e}")
             else:
-                st.error("The necessary columns ('Received Water', 'Water Usage', 'Water Limit') are not present in the data.")
+                st.error("The necessary columns ('Received_Water', 'Water_Usage', 'Water_Limit') are not present in the data.")
         else:
             st.error("The uploaded file does not contain the 'Date' column.")
 else:
