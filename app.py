@@ -36,10 +36,19 @@ ward_names = {
 # Add ward names to the dataframe
 household_data['Ward Name'] = household_data['Ward'].map(ward_names)
 
+# Add latitude and longitude for each ward (these are made-up coordinates for demonstration purposes)
+ward_coords = {
+    'Sirapur': (22.7196, 75.8577), 'Chandan Nagar': (22.7242, 75.8648), 'Kaalaani Nagar': (22.7324, 75.8765),
+    # Add coordinates for all wards...
+}
+
+household_data['Latitude'] = household_data['Ward Name'].map(lambda x: ward_coords.get(x, (0, 0))[0])
+household_data['Longitude'] = household_data['Ward Name'].map(lambda x: ward_coords.get(x, (0, 0))[1])
+
 # Navbar setup
 with st.sidebar:
-    selected = option_menu("Main Menu", ["Home", "Data", "Model", "About"], 
-        icons=['house', 'database', 'gear', 'info'], menu_icon="cast", default_index=0)
+    selected = option_menu("Main Menu", ["Home", "Data", "Map", "About"], 
+        icons=['house', 'database', 'map', 'info'], menu_icon="cast", default_index=0)
 
 # Home page
 if selected == "Home":
@@ -130,85 +139,26 @@ elif selected == "Data":
         sns.heatmap(heatmap_data, ax=ax5, cmap='viridis')
         st.pyplot(fig5)
 
-# Model page
-elif selected == "Model":
-    st.title("Model Training and Prediction")
-    model_path = 'water_usage_model.h5'
-    preprocessor_path = 'preprocessor.pkl'
+# Map page
+elif selected == "Map":
+    st.title("Ward Map Overview")
+    st.write("This map highlights wards with water disparity and leakage detection issues.")
+    
+    # Filter data for the map
+    map_data = household_data[['Ward Name', 'Latitude', 'Longitude', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)']].drop_duplicates()
 
-    # File upload widgets
-    model_file = st.file_uploader("Upload the model file (water_usage_model.h5)", type=["h5"])
-    preprocessor_file = st.file_uploader("Upload the preprocessor file (preprocessor.pkl)", type=["pkl"])
-
-    if model_file is not None:
-        with open(model_path, "wb") as f:
-            f.write(model_file.getbuffer())
-
-    if preprocessor_file is not None:
-        with open(preprocessor_path, "wb") as f:
-            f.write(preprocessor_file.getbuffer())
-
-    # Check if model and preprocessor files exist
-    if not os.path.exists(model_path):
-        st.error("Model file not found. Please upload the model file to the correct path.")
-        st.stop()
-
-    if not os.path.exists(preprocessor_path):
-        st.error("Preprocessor file not found. Please upload the preprocessor file to the correct path.")
-        st.stop()
-
-    # Load pre-trained model and preprocessor
-    model, preprocessor, error_message = load_model_and_preprocessor(model_path, preprocessor_path)
-    if error_message:
-        st.error(error_message)
-        st.stop()
-
-    # Ensure preprocessor is fitted correctly
-    household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
-    preprocessor = fit_preprocessor(preprocessor, household_data)
-
-    # Example of model prediction
-    def predict_usage(model, data):
-        # Select relevant features for prediction
-        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-        
-        # Encode categorical features
-        features = pd.get_dummies(features)
-
-        # Ensure the order of columns matches the order expected by the preprocessor
-        features = features.reindex(columns=preprocessor.get_feature_names_out(), fill_value=0)
-
-        prediction = model.predict(features)
-        return prediction.flatten()
-
-    if st.button("Predict Usage"):
-        try:
-            prediction = predict_usage(model, household_data)
-            household_data['Predicted Usage'] = prediction
-
-            st.write("### Predicted Data", household_data)
-
-            # Debugging: Print shapes and first few rows of actual and predicted usage
-            st.write("Shape of features:", household_data.shape)
-            st.write("Shape of predictions:", prediction.shape)
-            st.write("First few rows of actual usage:")
-            st.write(household_data['Monthly Water Usage (Liters)'].head())
-            st.write("First few rows of predicted usage:")
-            st.write(prediction[:5])
-
-            # Interactive plot for predictions
-            fig6 = go.Figure()
-            fig6.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Monthly Water Usage (Liters)'], mode='lines', name='Actual'))
-            fig6.add_trace(go.Scatter(x=household_data['Household ID'], y=household_data['Predicted Usage'], mode='lines', name='Predicted'))
-            fig6.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
-            st.plotly_chart(fig6)
-
-            # Saving data example
-            if st.button("Save Data"):
-                household_data.to_csv('predicted_household_water_usage.csv', index=False)
-                st.write("Data saved to `predicted_household_water_usage.csv`")
-        except Exception as e:
-            st.error(f"An error occurred during prediction: {e}")
+    fig = px.scatter_mapbox(map_data, 
+                            lat="Latitude", 
+                            lon="Longitude", 
+                            color="Leakage Detected (Yes/No)",
+                            size="Disparity in Supply (Yes/No)",
+                            hover_name="Ward Name", 
+                            hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
+                            zoom=10, 
+                            height=600)
+    fig.update_layout(mapbox_style="open-street-map")
+    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    st.plotly_chart(fig)
 
 # About page
 elif selected == "About":
