@@ -1,59 +1,14 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
-import tensorflow as tf
-import joblib
-import matplotlib.pyplot as plt
-import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
+import seaborn as sns
+import matplotlib.pyplot as plt
 from streamlit_option_menu import option_menu
-import os
 
-# Generate example household data
-@st.experimental_memo
-def generate_household_data(start_date, end_date):
-    np.random.seed(42)  # For reproducible results
-    num_households = 100
-    dates = pd.date_range(start=start_date, end=end_date)
-    data = pd.DataFrame({
-        'Household ID': np.arange(1, num_households + 1),
-        'Ward': np.random.choice(['A', 'B', 'C', 'D'], size=num_households),
-        'Area': np.random.choice(['Urban', 'Suburban', 'Rural'], size=num_households),
-        'Monthly Water Usage (Liters)': np.random.rand(num_households) * 150,
-        'Leakage Detected (Yes/No)': np.random.choice(['Yes', 'No'], size=num_households),
-        'Disparity in Supply (Yes/No)': np.random.choice(['Yes', 'No'], size=num_households),
-        'Income Level': np.random.choice(['Low', 'Medium', 'High'], size=num_households),
-        'Household Size': np.random.randint(1, 6, size=num_households),
-        'Date': np.random.choice(dates, size=num_households)
-    })
-    return data
-
-# Load pre-trained model and preprocessor
-@st.cache(allow_output_mutation=True)
-def load_model_and_preprocessor(model_file, preprocessor_file):
-    try:
-        model = tf.keras.models.load_model(model_file)
-    except Exception as e:
-        return None, None, f"Failed to load model: {str(e)}"
-    
-    try:
-        preprocessor = joblib.load(preprocessor_file)
-    except Exception as e:
-        return None, None, f"Failed to load preprocessor: {str(e)}"
-
-    return model, preprocessor, None
-
-# Ensure preprocessor is fitted correctly before transforming data
-@st.cache(allow_output_mutation=True)
-def fit_preprocessor(preprocessor, data):
-    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-    features = pd.get_dummies(features)
-    preprocessor.fit(features)
-    return preprocessor
+# Load the dataset
+file_path = 'indore_water_usage_data_difficult2.parquet'
+household_data = pd.read_parquet(file_path)
 
 # Navbar setup
 with st.sidebar:
@@ -71,21 +26,23 @@ elif selected == "Data":
     date_option = st.selectbox("Select date range", ["1 month", "6 months", "1 year"])
 
     if date_option == "1 month":
-        start_date = datetime.now() - timedelta(days=30)
+        start_date = pd.to_datetime("today") - pd.DateOffset(months=1)
     elif date_option == "6 months":
-        start_date = datetime.now() - timedelta(days=182)
+        start_date = pd.to_datetime("today") - pd.DateOffset(months=6)
     elif date_option == "1 year":
-        start_date = datetime.now() - timedelta(days=365)
+        start_date = pd.to_datetime("today") - pd.DateOffset(years=1)
 
-    end_date = datetime.now()
+    end_date = pd.to_datetime("today")
 
-    if st.button("Update Data"):
-        household_data = generate_household_data(start_date, end_date)
-        wards = household_data['Ward'].unique()
-        selected_ward = st.selectbox("Select Ward", wards)
+    # Filter data based on date range
+    filtered_data = household_data[(household_data['Date'] >= start_date) & (household_data['Date'] <= end_date)]
 
+    wards = filtered_data['Ward'].unique()
+    selected_ward = st.selectbox("Select Ward", sorted(wards))
+
+    if selected_ward:
         # Filter data based on selected ward
-        ward_data = household_data[household_data['Ward'] == selected_ward]
+        ward_data = filtered_data[filtered_data['Ward'] == selected_ward]
 
         st.write(f"### Household Data for Ward {selected_ward}", ward_data)
 
