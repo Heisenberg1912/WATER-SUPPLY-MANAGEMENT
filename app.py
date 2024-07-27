@@ -35,7 +35,7 @@ def generate_household_data(start_date, end_date):
 # Load pre-trained model and preprocessor
 @st.cache(allow_output_mutation=True)
 def load_model_and_preprocessor():
-    model = tf.keras.models.load_model('water_usage_model.h5')
+    model = tf.keras.models.load_model('/mnt/data/water_usage_model.h5')
     # Assuming preprocessor.pkl is in the same directory as the script
     try:
         preprocessor = joblib.load('preprocessor.pkl')
@@ -50,6 +50,13 @@ def load_model_and_preprocessor():
                 ('cat', OneHotEncoder(), categorical_features)
             ])
     return model, preprocessor
+
+# Ensure preprocessor is fitted correctly before transforming data
+@st.cache(allow_output_mutation=True)
+def fit_preprocessor(preprocessor, data):
+    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+    preprocessor.fit(features)
+    return preprocessor
 
 # Navbar setup
 with st.sidebar:
@@ -135,6 +142,10 @@ elif selected == "Model":
     # Load pre-trained model and preprocessor
     model, preprocessor = load_model_and_preprocessor()
 
+    # Ensure preprocessor is fitted correctly
+    household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
+    preprocessor = fit_preprocessor(preprocessor, household_data)
+
     # Example of model prediction
     def predict_usage(model, data):
         # Select relevant features for prediction
@@ -144,7 +155,6 @@ elif selected == "Model":
         return prediction.flatten()
 
     if st.button("Predict Usage"):
-        household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
         try:
             prediction = predict_usage(model, household_data)
             household_data['Predicted Usage'] = prediction
