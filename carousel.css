@@ -11,7 +11,7 @@
 /* Watermark on main content */
 .main::before {
     content: "";
-    background: url('/mnt/data/Emblem_of_IMC_Indore.jpg');  /* Use the uploaded logo path */
+    background: ('1.png');  /* Use the uploaded logo path */
     opacity: 0.1;
     top: 50%;
     left: 50%;
