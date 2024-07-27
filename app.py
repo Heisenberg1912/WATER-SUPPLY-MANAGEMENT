@@ -34,6 +34,20 @@ def generate_household_data(start_date, end_date):
     })
     return data
 
+# Create the preprocessor to ensure it produces exactly 7 features
+def create_preprocessor():
+    numeric_features = ['Household Size', 'Avg Temp']
+    categorical_features = ['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', StandardScaler(), numeric_features),
+            ('cat', OneHotEncoder(drop='first'), categorical_features)  # Drop first to avoid dummy variable trap
+        ], remainder='passthrough'
+    )
+
+    return preprocessor
+
 # Load pre-trained model and preprocessor
 @st.cache(allow_output_mutation=True, suppress_st_warning=True)
 def load_model_and_preprocessor(model_file, preprocessor_file):
@@ -60,8 +74,6 @@ def fit_preprocessor(preprocessor, data):
 def debug_preprocessor(preprocessor, data):
     features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size', 'Avg Temp']]
     features_transformed = preprocessor.transform(features)
-    feature_names = preprocessor.named_transformers_['cat'].get_feature_names_out()
-    st.write("Transformed feature names:", feature_names)
     st.write("Shape of features after transformation:", features_transformed.shape)
     return features_transformed
 
