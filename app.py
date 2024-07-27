@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from streamlit_option_menu import option_menu
 
 # Load the dataset
-file_path = '/mnt/data/indore_water_usage_data_difficult2.parquet'
+file_path = 'indore_water_usage_data_difficult2.parquet'
 household_data = pd.read_parquet(file_path)
 
 # Mapping of ward numbers to names
