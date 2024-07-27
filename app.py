@@ -36,7 +36,7 @@ def generate_household_data(start_date, end_date):
 # Load pre-trained model and preprocessor
 @st.cache(allow_output_mutation=True)
 def load_model_and_preprocessor():
-    model_path = '/mnt/data/water_usage_model.h5'
+    model_path = 'water_usage_model.h5'
     if os.path.exists(model_path):
         model = tf.keras.models.load_model(model_path)
     else:
