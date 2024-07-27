@@ -133,7 +133,7 @@ map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
 # Custom CSS for background colors
 st.markdown(
-    """
+    
     <style>
     .css-1d391kg {
         background-color: #126962 !important;
@@ -155,7 +155,7 @@ st.markdown(
         z-index: -1;
     }
     </style>
-    """,
+    ,
     unsafe_allow_html=True
 )
 
