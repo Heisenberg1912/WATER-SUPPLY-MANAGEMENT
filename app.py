@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from streamlit_option_menu import option_menu
+import os
 
 # Generate example household data
 @st.experimental_memo
@@ -35,11 +36,17 @@ def generate_household_data(start_date, end_date):
 # Load pre-trained model and preprocessor
 @st.cache(allow_output_mutation=True)
 def load_model_and_preprocessor():
-    model = tf.keras.models.load_model('/mnt/data/water_usage_model.h5')
-    # Assuming preprocessor.pkl is in the same directory as the script
-    try:
-        preprocessor = joblib.load('preprocessor.pkl')
-    except:
+    model_path = '/mnt/data/water_usage_model.h5'
+    if os.path.exists(model_path):
+        model = tf.keras.models.load_model(model_path)
+    else:
+        st.error("Model file not found. Please upload the model file to the correct path.")
+        return None, None
+
+    preprocessor_path = 'preprocessor.pkl'
+    if os.path.exists(preprocessor_path):
+        preprocessor = joblib.load(preprocessor_path)
+    else:
         # Define preprocessor again in case the file is not found
         categorical_features = ['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']
         numeric_features = ['Household Size']
@@ -141,6 +148,8 @@ elif selected == "Model":
     st.title("Model Training and Prediction")
     # Load pre-trained model and preprocessor
     model, preprocessor = load_model_and_preprocessor()
+    if model is None or preprocessor is None:
+        st.stop()
 
     # Ensure preprocessor is fitted correctly
     household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
