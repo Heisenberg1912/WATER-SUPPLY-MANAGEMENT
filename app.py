@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
@@ -12,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 
 # Function to create and train a new model
 def create_and_train_model(data):
-    features = data[['Water Usage', 'Household Size', 'Num Days No Water', 'Avg Temp']].values
+    features = data[['Household Size', 'Num Days No Water', 'Avg Temp']].values
     target = data['Water Usage'].values
 
     X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
@@ -137,7 +138,7 @@ if st.button("Update Data"):
     # Example of model prediction
     def predict_usage(model, data):
         # Ensure the data has the correct shape
-        features = data[['Water Usage', 'Household Size', 'Num Days No Water', 'Avg Temp']].values
+        features = data[['Household Size', 'Num Days No Water', 'Avg Temp']].values
         features = scaler.transform(features)
         prediction = model.predict(features)
         return prediction.flatten()
