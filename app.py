@@ -94,8 +94,14 @@ uploaded_file = st.file_uploader("Upload Parquet File", type=["parquet"])
 if uploaded_file is not None:
     data = pd.read_parquet(uploaded_file)
 
+    # Display the columns of the dataframe to inspect available data
+    st.write("### Data Columns", data.columns)
+
     # Filter data for the selected ward
-    data = data[data['Ward'] == selected_ward_number]
+    if 'Ward' in data.columns:
+        data = data[data['Ward'] == selected_ward_number]
+    else:
+        st.error("The uploaded file does not contain the 'Ward' column.")
 
     # Ensure all expected columns are present in data
     for col in ['Season_Spring', 'Season_Summer']:
@@ -104,87 +110,94 @@ if uploaded_file is not None:
 
     # Update data based on selected date range
     if st.button("Update Data"):
-        data_filtered = data[(data['Date'] >= start_date) & (data['Date'] <= end_date)]
-        st.write(f"### Household Data for {selected_ward} Ward (Ward Number {selected_ward_number})", data_filtered)
+        if 'Date' in data.columns:
+            data['Date'] = pd.to_datetime(data['Date'])
+            data_filtered = data[(data['Date'] >= start_date) & (data['Date'] <= end_date)]
+            st.write(f"### Household Data for {selected_ward} Ward (Ward Number {selected_ward_number})", data_filtered)
 
-        # Calculate statistics
-        total_households = len(data_filtered)
-        households_receiving_water = data_filtered['Received Water'].sum()
-        households_not_receiving_water = total_households - households_receiving_water
+            # Calculate statistics
+            if 'Received Water' in data_filtered.columns and 'Water Usage' in data_filtered.columns and 'Water Limit' in data_filtered.columns:
+                total_households = len(data_filtered)
+                households_receiving_water = data_filtered['Received Water'].sum()
+                households_not_receiving_water = total_households - households_receiving_water
 
-        used_within_limit = (data_filtered['Water Usage'] <= data_filtered['Water Limit']).sum()
-        wasted_beyond_limit = (data_filtered['Water Usage'] > data_filtered['Water Limit']).sum()
+                used_within_limit = (data_filtered['Water Usage'] <= data_filtered['Water Limit']).sum()
+                wasted_beyond_limit = (data_filtered['Water Usage'] > data_filtered['Water Limit']).sum()
 
-        total_usage = data_filtered['Water Usage'].sum()
-        total_wasted = data_filtered.loc[data_filtered['Water Usage'] > data_filtered['Water Limit'], 'Water Usage'].sum() - data_filtered.loc[data_filtered['Water Usage'] > data_filtered['Water Limit'], 'Water Limit'].sum()
+                total_usage = data_filtered['Water Usage'].sum()
+                total_wasted = data_filtered.loc[data_filtered['Water Usage'] > data_filtered['Water Limit'], 'Water Usage'].sum() - data_filtered.loc[data_filtered['Water Usage'] > data_filtered['Water Limit'], 'Water Limit'].sum()
 
-        mean_usage = data_filtered['Water Usage'].mean()
-        median_usage = data_filtered['Water Usage'].median()
-        std_usage = data_filtered['Water Usage'].std()
+                mean_usage = data_filtered['Water Usage'].mean()
+                median_usage = data_filtered['Water Usage'].median()
+                std_usage = data_filtered['Water Usage'].std()
 
-        st.write(f"**Total households**: {total_households}")
-        st.write(f"**Households receiving water**: {households_receiving_water}")
-        st.write(f"**Households not receiving water**: {households_not_receiving_water}")
-        st.write(f"**Households using water within limit**: {used_within_limit}")
-        st.write(f"**Households wasting water beyond limit**: {wasted_beyond_limit}")
-        st.write(f"**Total water usage (liters)**: {total_usage:.2f}")
-        st.write(f"**Total water wasted (liters)**: {total_wasted:.2f}")
-        st.write(f"**Mean water usage (liters)**: {mean_usage:.2f}")
-        st.write(f"**Median water usage (liters)**: {median_usage:.2f}")
-        st.write(f"**Standard deviation of water usage (liters)**: {std_usage:.2f}")
+                st.write(f"**Total households**: {total_households}")
+                st.write(f"**Households receiving water**: {households_receiving_water}")
+                st.write(f"**Households not receiving water**: {households_not_receiving_water}")
+                st.write(f"**Households using water within limit**: {used_within_limit}")
+                st.write(f"**Households wasting water beyond limit**: {wasted_beyond_limit}")
+                st.write(f"**Total water usage (liters)**: {total_usage:.2f}")
+                st.write(f"**Total water wasted (liters)**: {total_wasted:.2f}")
+                st.write(f"**Mean water usage (liters)**: {mean_usage:.2f}")
+                st.write(f"**Median water usage (liters)**: {median_usage:.2f}")
+                st.write(f"**Standard deviation of water usage (liters)**: {std_usage:.2f}")
 
-        # Interactive bar plot
-        fig = px.bar(
-            x=['Receiving Water', 'Not Receiving Water'], 
-            y=[households_receiving_water, households_not_receiving_water],
-            labels={'x': 'Household Status', 'y': 'Number of Households'},
-            title='Households Receiving vs. Not Receiving Water'
-        )
-        st.plotly_chart(fig)
+                # Interactive bar plot
+                fig = px.bar(
+                    x=['Receiving Water', 'Not Receiving Water'], 
+                    y=[households_receiving_water, households_not_receiving_water],
+                    labels={'x': 'Household Status', 'y': 'Number of Households'},
+                    title='Households Receiving vs. Not Receiving Water'
+                )
+                st.plotly_chart(fig)
 
-        fig2 = px.bar(
-            x=['Within Limit', 'Beyond Limit'], 
-            y=[used_within_limit, wasted_beyond_limit],
-            labels={'x': 'Usage Status', 'y': 'Number of Households'},
-            title='Households Using Water Within Limit vs. Beyond Limit'
-        )
-        st.plotly_chart(fig2)
+                fig2 = px.bar(
+                    x=['Within Limit', 'Beyond Limit'], 
+                    y=[used_within_limit, wasted_beyond_limit],
+                    labels={'x': 'Usage Status', 'y': 'Number of Households'},
+                    title='Households Using Water Within Limit vs. Beyond Limit'
+                )
+                st.plotly_chart(fig2)
 
-        # Heatmap for water usage
-        heatmap_data = data_filtered.pivot_table(values='Water Usage', index='Household ID', columns='Date', fill_value=0)
-        fig3, ax3 = plt.subplots(figsize=(10, 8))
-        sns.heatmap(heatmap_data, ax=ax3, cmap='viridis')
-        st.pyplot(fig3)
+                # Heatmap for water usage
+                heatmap_data = data_filtered.pivot_table(values='Water Usage', index='Household ID', columns='Date', fill_value=0)
+                fig3, ax3 = plt.subplots(figsize=(10, 8))
+                sns.heatmap(heatmap_data, ax=ax3, cmap='viridis')
+                st.pyplot(fig3)
 
-        # Load or create model
-        model, scaler = load_or_create_model(data_filtered)
+                # Load or create model
+                model, scaler = load_or_create_model(data_filtered)
 
-        # Example of model prediction
-        def predict_usage(model, data):
-            # Ensure the data has the correct shape
-            features = data[['Household Size', 'Num Days No Water', 'Avg Temp', 'Season_Spring', 'Season_Summer']].values
-            features = scaler.transform(features)
-            prediction = model.predict(features)
-            return prediction.flatten()
+                # Example of model prediction
+                def predict_usage(model, data):
+                    # Ensure the data has the correct shape
+                    features = data[['Household Size', 'Num Days No Water', 'Avg Temp', 'Season_Spring', 'Season_Summer']].values
+                    features = scaler.transform(features)
+                    prediction = model.predict(features)
+                    return prediction.flatten()
 
-        try:
-            prediction = predict_usage(model, data_filtered)
-            data_filtered['Predicted Usage'] = prediction
+                try:
+                    prediction = predict_usage(model, data_filtered)
+                    data_filtered['Predicted Usage'] = prediction
 
-            st.write("### Predicted Data", data_filtered)
+                    st.write("### Predicted Data", data_filtered)
 
-            # Interactive plot for predictions
-            fig4 = go.Figure()
-            fig4.add_trace(go.Scatter(x=data_filtered['Household ID'], y=data_filtered['Water Usage'], mode='lines', name='Actual'))
-            fig4.add_trace(go.Scatter(x=data_filtered['Household ID'], y=data_filtered['Predicted Usage'], mode='lines', name='Predicted'))
-            fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
-            st.plotly_chart(fig4)
+                    # Interactive plot for predictions
+                    fig4 = go.Figure()
+                    fig4.add_trace(go.Scatter(x=data_filtered['Household ID'], y=data_filtered['Water Usage'], mode='lines', name='Actual'))
+                    fig4.add_trace(go.Scatter(x=data_filtered['Household ID'], y=data_filtered['Predicted Usage'], mode='lines', name='Predicted'))
+                    fig4.update_layout(title='Actual vs. Predicted Water Usage', xaxis_title='Household ID', yaxis_title='Water Usage (liters)')
+                    st.plotly_chart(fig4)
 
-            # Saving data example
-            if st.button("Save Data"):
-                data_filtered.to_csv('predicted_household_water_usage.csv')
-                st.write("Data saved to `predicted_household_water_usage.csv`")
-        except Exception as e:
-            st.error(f"An error occurred during prediction: {e}")
+                    # Saving data example
+                    if st.button("Save Data"):
+                        data_filtered.to_csv('predicted_household_water_usage.csv')
+                        st.write("Data saved to `predicted_household_water_usage.csv`")
+                except Exception as e:
+                    st.error(f"An error occurred during prediction: {e}")
+            else:
+                st.error("The necessary columns ('Received Water', 'Water Usage', 'Water Limit') are not present in the data.")
+        else:
+            st.error("The uploaded file does not contain the 'Date' column.")
 else:
     st.write("Please upload the Parquet file to proceed.")
