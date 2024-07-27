@@ -8,3 +8,5 @@ plotly==5.12.0
 streamlit==1.10.0
 scikit-learn==1.2.2
 streamlit-option-menu==0.3.2
+pyarrow==12.0.1  # Required for reading parquet files
+fastparquet==0.9.0  # Alternative for reading parquet files
