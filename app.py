@@ -37,7 +37,7 @@ household_data['Ward Name'] = household_data['Ward'].map(ward_names)
 
 # Add latitude and longitude for each ward (these are made-up coordinates for demonstration purposes)
 ward_coords = {
-'Sirapur': (22.7196, 75.8577),
+   'Sirapur': (22.7196, 75.8577),
     'Chandan Nagar': (22.7242, 75.8648),
     'Kaalaani Nagar': (22.7324, 75.8765),
     'Sukhadev Nagar': (22.7292, 75.8744),
@@ -131,42 +131,13 @@ household_data['Longitude'] = household_data['Ward Name'].map(lambda x: ward_coo
 map_data = household_data.dropna(subset=['Latitude', 'Longitude'])
 map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
-# Custom CSS for background colors and watermark
-st.markdown(
-    """
-    <style>
-    /* Sidebar background color */
-    .css-1d391kg {
-        background-color: #126962 !important;
-    }
-    
-    /* Main content background color */
-    .css-18e3th9 {
-        background-color: #007f7f !important;
-    }
-    
-    /* Watermark on main content */
-    .main::before {
-        content: "";
-        background: url('1.png');  /* Use the uploaded logo path */
-        opacity: 0.1;
-        top: 50%;
-        left: 50%;
-        position: absolute;
-        transform: translate(-50%, -50%);
-        width: 100%;
-        height: 100%;
-        background-size: contain;
-        z-index: -1;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# Load CSS
+with open('carousel.css') as f:
+    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 # Navbar setup
 with st.sidebar:
-    st.image('1.png', width=200)  # Use the uploaded logo path
+    st.image('/mnt/data/Emblem_of_IMC_Indore.jpg', width=200)  # Use the uploaded logo path
     selected = option_menu("Main Menu", ["Home", "Data", "Map", "About"], 
         icons=['house', 'database', 'map', 'info'], menu_icon="cast", default_index=0)
 
@@ -174,6 +145,10 @@ with st.sidebar:
 if selected == "Home":
     st.title("Water Supply Management")
     st.write("Welcome to the Water Supply Management System. Use the sidebar to navigate to different sections.")
+    
+    # Load and display HTML for the carousel
+    with open('carousel.html') as f:
+        st.markdown(f.read(), unsafe_allow_html=True)
 
 # Data page
 elif selected == "Data":
