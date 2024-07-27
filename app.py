@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 
 # Function to create and train a new model
 def create_and_train_model(data):
-    features = data[['Household Size', 'Num Days No Water', 'Avg Temp', 'Season_Spring', 'Season_Summer', 'Season_Winter']].values
+    features = data[['Household Size', 'Num Days No Water', 'Avg Temp', 'Season_Spring', 'Season_Summer']].values
     target = data['Water Usage'].values
 
     X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
@@ -77,11 +77,7 @@ def generate_household_data(start_date, end_date):
         'Avg Temp': np.random.rand(num_households) * 10 + 15,  # Average temperature
         'Season': np.random.choice(['Spring', 'Summer', 'Winter'], size=num_households)
     })
-    data = pd.get_dummies(data, columns=['Season'], drop_first=False)  # One-hot encoding for categorical data
-    # Ensure all expected columns are present
-    for col in ['Season_Spring', 'Season_Summer', 'Season_Winter']:
-        if col not in data.columns:
-            data[col] = 0
+    data = pd.get_dummies(data, columns=['Season'], drop_first=True)  # One-hot encoding for categorical data
     return data
 
 # Update data based on selected date range
@@ -144,7 +140,7 @@ if st.button("Update Data"):
     # Example of model prediction
     def predict_usage(model, data):
         # Ensure the data has the correct shape
-        features = data[['Household Size', 'Num Days No Water', 'Avg Temp', 'Season_Spring', 'Season_Summer', 'Season_Winter']].values
+        features = data[['Household Size', 'Num Days No Water', 'Avg Temp', 'Season_Spring', 'Season_Summer']].values
         features = scaler.transform(features)
         prediction = model.predict(features)
         return prediction.flatten()
