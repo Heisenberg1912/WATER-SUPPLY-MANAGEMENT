@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from streamlit_option_menu import option_menu
 
 # Load the dataset
-file_path = 'indore_water_usage_data_difficult2.parquet'
+file_path = '/mnt/data/indore_water_usage_data_difficult2.parquet'
 household_data = pd.read_parquet(file_path)
 
 # Mapping of ward numbers to names
@@ -235,22 +235,29 @@ elif selected == "Map":
     map_data = map_data.dropna(subset=['Latitude', 'Longitude'])
     map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
-    # Create a new column to highlight disparity and leakage
-    map_data['Disparity'] = map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
-    map_data['Leakage'] = map_data.apply(lambda x: 10 if x['Leakage Detected (Yes/No)'] == 'Yes' else 5, axis=1)  # Use different sizes for leakage
+    wards = map_data['Ward Name'].unique()
+    selected_ward = st.selectbox("Select Ward", sorted(wards))
 
-    fig = px.scatter_mapbox(map_data, 
-                            lat="Latitude", 
-                            lon="Longitude", 
-                            color="Disparity",
-                            size="Leakage",
-                            hover_name="Ward Name", 
-                            hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
-                            zoom=10, 
-                            height=600)
-    fig.update_layout(mapbox_style="open-street-map")
-    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-    st.plotly_chart(fig)
+    if selected_ward:
+        # Filter map data based on selected ward
+        ward_map_data = map_data[map_data['Ward Name'] == selected_ward]
+
+        # Create a new column to highlight disparity and leakage
+        ward_map_data['Disparity'] = ward_map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
+        ward_map_data['Leakage'] = ward_map_data.apply(lambda x: 10 if x['Leakage Detected (Yes/No)'] == 'Yes' else 5, axis=1)  # Use different sizes for leakage
+
+        fig = px.scatter_mapbox(ward_map_data, 
+                                lat="Latitude", 
+                                lon="Longitude", 
+                                color="Disparity",
+                                size="Leakage",
+                                hover_name="Ward Name", 
+                                hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
+                                zoom=10, 
+                                height=600)
+        fig.update_layout(mapbox_style="open-street-map")
+        fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+        st.plotly_chart(fig)
 
 # About page
 elif selected == "About":
