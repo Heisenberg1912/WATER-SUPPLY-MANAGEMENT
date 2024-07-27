@@ -58,12 +58,12 @@ def create_and_train_model(data):
     ])
 
     model.compile(optimizer='adam', loss='mse')
-    model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+    model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test), verbose=0)
 
     return model, preprocessor
 
 # Function to load or create the model
-@st.experimental_singleton
+@st.cache(allow_output_mutation=True)
 def load_or_create_model(data):
     try:
         model = tf.keras.models.load_model('water_usage_model.h5')
@@ -156,7 +156,8 @@ elif selected == "Data":
 elif selected == "Model":
     st.title("Model Training and Prediction")
     # Load or create model
-    model, preprocessor = load_or_create_model(generate_household_data(datetime.now() - timedelta(days=365), datetime.now()))
+    household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
+    model, preprocessor = load_or_create_model(household_data)
 
     # Example of model prediction
     def predict_usage(model, data):
@@ -167,7 +168,6 @@ elif selected == "Model":
         return prediction.flatten()
 
     if st.button("Predict Usage"):
-        household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
         try:
             prediction = predict_usage(model, household_data)
             household_data['Predicted Usage'] = prediction
