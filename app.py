@@ -51,6 +51,7 @@ def load_model_and_preprocessor(model_file, preprocessor_file):
 @st.cache(allow_output_mutation=True)
 def fit_preprocessor(preprocessor, data):
     features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+    features = pd.get_dummies(features)
     preprocessor.fit(features)
     return preprocessor
 
@@ -189,11 +190,7 @@ elif selected == "Model":
         features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
         
         # Encode categorical features
-        categorical_features = ['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']
-        encoded_features = pd.get_dummies(features[categorical_features])
-        numerical_features = features[['Household Size']]
-        
-        features = pd.concat([encoded_features, numerical_features], axis=1)
+        features = pd.get_dummies(features)
 
         # Ensure the order of columns matches the order expected by the preprocessor
         features = features.reindex(columns=preprocessor.get_feature_names_out(), fill_value=0)
