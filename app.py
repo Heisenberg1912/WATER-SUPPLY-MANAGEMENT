@@ -7,8 +7,34 @@ import matplotlib.pyplot as plt
 from streamlit_option_menu import option_menu
 
 # Load the dataset
-file_path = 'indore_water_usage_data_difficult2.parquet'
+file_path = '/mnt/data/indore_water_usage_data_difficult2.parquet'
 household_data = pd.read_parquet(file_path)
+
+# Mapping of ward numbers to names
+ward_names = {
+    1: 'Sirapur', 2: 'Chandan Nagar', 3: 'Kaalaani Nagar', 4: 'Sukhadev Nagar', 5: 'Raaj Nagar',
+    6: 'Malhaaraganj', 7: 'Janata Colony', 8: 'Joona Risaala', 9: 'Vrindaavan', 10: 'Baanaganga',
+    11: 'Bhaageerathpura', 12: 'Govind Colony', 13: 'Sangamanagar', 14: 'Ashok Nagar', 15: 'Bijaasan',
+    16: 'Nandabaag', 17: 'Kushavaah Nagar', 18: 'Sant Kabeer', 19: 'Vishvakarma', 20: 'Gauree Nagar',
+    21: 'Shyaam Nagar', 22: 'P.Dee.D.Upaa. Nagar', 23: 'Sv. Raajesh Joshee', 24: 'Sant Baaleejee Mahaaraaj',
+    25: 'Nanda Nagar', 26: 'Jeen Maata', 27: 'Pashupati Naath', 28: 'Maam Tulaja Bhavaanee',
+    29: 'Dr Shyaamaaprasaad Mukharjee Nagar', 30: 'Sant Ravidaas', 31: 'Mahaaraaja Chhatrasaal',
+    32: 'Atal Bihaaree Baajapeyee', 33: 'Sookhaliya', 34: 'Shaheed BhagatSinh', 35: 'Lasudiya Moree',
+    36: 'Nepaaniya', 37: 'Saamee Kripa', 38: 'Haajee Colony', 39: 'Naaharasha Havelee', 40: 'Khajaraana',
+    41: 'Kailaashapuree', 42: 'Swami Vivekaanand', 43: 'Shreenagar', 44: 'H.I.G.', 45: 'Dr. Bheemrao Ambedkar',
+    46: 'Somanaath', 47: 'Saradaar Vallabh Bhai', 48: 'Geeta Bhavan', 49: 'Tilak Nagar', 50: 'Brajeshvaree',
+    51: 'Maam Bhagavatee Nagar', 52: 'Musakkhedi', 53: 'Dr Maulaana Aajaad Nagar', 54: 'Residency',
+    55: 'Saaooth Tukoganj', 56: 'Snehalata Ganj', 57: 'Devi Ahilyaabai', 58: 'Emli Bazaar', 59: 'Harasiddhee',
+    60: 'Ranipuraa', 61: 'Taatyaa Saravate', 62: 'Raavajee Baazaar', 63: 'Navalakha', 64: 'Chitaavad',
+    65: 'Sant Kavar Raam', 66: 'Shaheed Hemu Kolonee', 67: 'Mahaaraaja Holakar', 68: 'Bambaee Baazaar',
+    69: 'Jawaahar Maarg', 70: 'Lok Naayak Nagar', 71: 'Dravid Nagar', 72: 'Lok Maanya Nagar',
+    73: 'Lakshman Sinh Chauhaan', 74: 'Vishnupuree', 75: 'Paalada', 76: 'Mundlaa Naayta', 77: 'Billavali',
+    78: 'Choithram', 79: 'Sukhniwas', 80: 'Dr Rajendra Prasaad', 81: 'Annapurna', 82: 'Sudaama Nagar',
+    83: 'Gumaastaa Nagar', 84: 'Dawaarkapuri', 85: 'Prajaapat Nagar'
+}
+
+# Add ward names to the dataframe
+household_data['Ward Name'] = household_data['Ward'].map(ward_names)
 
 # Navbar setup
 with st.sidebar:
@@ -37,12 +63,12 @@ elif selected == "Data":
     # Filter data based on date range
     filtered_data = household_data[(household_data['Date'] >= start_date) & (household_data['Date'] <= end_date)]
 
-    wards = filtered_data['Ward'].unique()
+    wards = filtered_data['Ward Name'].unique()
     selected_ward = st.selectbox("Select Ward", sorted(wards))
 
     if selected_ward:
         # Filter data based on selected ward
-        ward_data = filtered_data[filtered_data['Ward'] == selected_ward]
+        ward_data = filtered_data[filtered_data['Ward Name'] == selected_ward]
 
         st.write(f"### Household Data for Ward {selected_ward}", ward_data)
 
