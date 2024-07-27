@@ -8,7 +8,6 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from streamlit_option_menu import option_menu
@@ -79,8 +78,8 @@ def debug_preprocessor(preprocessor, data):
 
 # Navbar setup
 with st.sidebar:
-    selected = option_menu("Main Menu", ["Home", "Data", "Model", "About"], 
-        icons=['house', 'database', 'gear', 'info'], menu_icon="cast", default_index=0)
+    selected = option_menu("Main Menu", ["Home", "Data", "Model", "Report Issue", "About"], 
+        icons=['house', 'database', 'gear', 'exclamation-circle', 'info'], menu_icon="cast", default_index=0)
 
 # Home page
 if selected == "Home":
@@ -232,6 +231,35 @@ elif selected == "Model":
                 st.write("Data saved to `predicted_household_water_usage.csv`")
         except Exception as e:
             st.error(f"An error occurred during prediction: {e}")
+
+# Report Issue page
+elif selected == "Report Issue":
+    st.title("Report a Water-Related Issue")
+
+    with st.form("report_issue_form"):
+        household_id = st.text_input("Household ID")
+        issue_type = st.selectbox("Type of Issue", ["Leakage", "No Supply", "Low Pressure", "Quality Issue", "Other"])
+        description = st.text_area("Description")
+        report_date = st.date_input("Date", datetime.now())
+        submit_button = st.form_submit_button("Submit Report")
+
+        if submit_button:
+            if not household_id or not issue_type or not description:
+                st.error("Please fill out all fields in the form.")
+            else:
+                # Save the report to a CSV file
+                report_data = {
+                    "Household ID": [household_id],
+                    "Issue Type": [issue_type],
+                    "Description": [description],
+                    "Date": [report_date]
+                }
+                report_df = pd.DataFrame(report_data)
+                if os.path.exists("issue_reports.csv"):
+                    report_df.to_csv("issue_reports.csv", mode='a', header=False, index=False)
+                else:
+                    report_df.to_csv("issue_reports.csv", index=False)
+                st.success("Issue reported successfully!")
 
 # About page
 elif selected == "About":
