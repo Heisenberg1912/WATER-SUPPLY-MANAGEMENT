@@ -134,7 +134,7 @@ map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 # Navbar setup
 with st.sidebar:
     selected = option_menu("Main Menu", ["Home", "Data", "Map", "About"], 
-        icons=['house', 'database', 'map', 'info'], menu_icon="cast", default_index=0)
+        icons=['house', 'data', 'map', 'info'], menu_icon="cast", default_index=0)
 
 # Home page
 if selected == "Home":
