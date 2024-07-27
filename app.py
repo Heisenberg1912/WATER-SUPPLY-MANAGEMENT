@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
 from streamlit_option_menu import option_menu
 
 # Generate example household data
@@ -35,8 +34,8 @@ def generate_household_data(start_date, end_date):
 
 # Function to create and train a new model
 def create_and_train_model(data):
-    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']].values
-    target = data['Monthly Water Usage (Liters)'].values
+    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
+    target = data['Monthly Water Usage (Liters)']
 
     categorical_features = ['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']
     numeric_features = ['Household Size']
@@ -162,7 +161,7 @@ elif selected == "Model":
     # Example of model prediction
     def predict_usage(model, data):
         # Select relevant features for prediction
-        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']].values
+        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
         features = preprocessor.transform(features)
         prediction = model.predict(features)
         return prediction.flatten()
