@@ -159,4 +159,4 @@ elif selected == "Model":
 # About page
 elif selected == "About":
     st.title("About")
-    st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict
+    st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict future water usage based on various factors such as household size, days without water, and average temperature. The data is visualized using interactive plots for better understanding and decision making.")
