@@ -187,7 +187,17 @@ elif selected == "Model":
     def predict_usage(model, data):
         # Select relevant features for prediction
         features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-        features = preprocessor.transform(features)
+        
+        # Encode categorical features
+        categorical_features = ['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']
+        encoded_features = pd.get_dummies(features[categorical_features])
+        numerical_features = features[['Household Size']]
+        
+        features = pd.concat([encoded_features, numerical_features], axis=1)
+
+        # Ensure the order of columns matches the order expected by the preprocessor
+        features = features.reindex(columns=preprocessor.get_feature_names_out(), fill_value=0)
+
         prediction = model.predict(features)
         return prediction.flatten()
 
