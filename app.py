@@ -8,7 +8,6 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from streamlit_option_menu import option_menu
@@ -29,36 +28,53 @@ def generate_household_data(start_date, end_date):
         'Disparity in Supply (Yes/No)': np.random.choice(['Yes', 'No'], size=num_households),
         'Income Level': np.random.choice(['Low', 'Medium', 'High'], size=num_households),
         'Household Size': np.random.randint(1, 6, size=num_households),
+        'Avg Temp': np.random.rand(num_households) * 10 + 15,  # Simulated average temperature
         'Date': np.random.choice(dates, size=num_households)
     })
     return data
 
-# Load pre-trained model and preprocessor
+# Load pre-trained model and scaler
 @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-def load_model_and_preprocessor(model_file, preprocessor_file):
+def load_model_and_scaler(model_file, scaler_file):
     try:
         model = tf.keras.models.load_model(model_file)
     except Exception as e:
         return None, None, f"Failed to load model: {str(e)}"
     
     try:
-        preprocessor = joblib.load(preprocessor_file)
+        scaler = joblib.load(scaler_file)
     except Exception as e:
-        return None, None, f"Failed to load preprocessor: {str(e)}"
+        return None, None, f"Failed to load scaler: {str(e)}"
 
-    return model, preprocessor, None
+    return model, scaler, None
 
-# Ensure preprocessor is fitted correctly before transforming data
+# Ensure scaler is fitted correctly before transforming data
 @st.cache(allow_output_mutation=True)
-def fit_preprocessor(preprocessor, data):
-    features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-    preprocessor.fit(features)
-    return preprocessor
+def fit_scaler(scaler, data):
+    numeric_features = data[['Household Size', 'Avg Temp']]
+    scaler.fit(numeric_features)
+    return scaler
+
+# Transform the data
+def transform_data(data, scaler):
+    numeric_features = data[['Household Size', 'Avg Temp']]
+    categorical_features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level']]
+    
+    # Scale numeric features
+    numeric_transformed = scaler.transform(numeric_features)
+    
+    # One-hot encode categorical features
+    encoder = OneHotEncoder(drop='first', sparse=False)
+    categorical_transformed = encoder.fit_transform(categorical_features)
+    
+    # Concatenate all features
+    features_transformed = np.hstack((numeric_transformed, categorical_transformed))
+    return features_transformed
 
 # Navbar setup
 with st.sidebar:
-    selected = option_menu("Main Menu", ["Home", "Data", "Model", "About"], 
-        icons=['house', 'database', 'gear', 'info'], menu_icon="cast", default_index=0)
+    selected = option_menu("Main Menu", ["Home", "Data", "Model", "Report Issue", "About"], 
+        icons=['house', 'database', 'gear', 'exclamation-circle', 'info'], menu_icon="cast", default_index=0)
 
 # Home page
 if selected == "Home":
@@ -137,56 +153,60 @@ elif selected == "Data":
 elif selected == "Model":
     st.title("Model Training and Prediction")
     model_path = 'water_usage_model.h5'
-    preprocessor_path = 'preprocessor.pkl'
+    scaler_path = 'scaler.pkl'
 
     # File upload widgets
     model_file = st.file_uploader("Upload the model file (water_usage_model.h5)", type=["h5"])
-    preprocessor_file = st.file_uploader("Upload the preprocessor file (preprocessor.pkl)", type=["pkl"])
+    scaler_file = st.file_uploader("Upload the scaler file (scaler.pkl)", type=["pkl"])
 
     if model_file is not None:
         with open(model_path, "wb") as f:
             f.write(model_file.getbuffer())
 
-    if preprocessor_file is not None:
-        with open(preprocessor_path, "wb") as f:
-            f.write(preprocessor_file.getbuffer())
+    if scaler_file is not None:
+        with open(scaler_path, "wb") as f:
+            f.write(scaler_file.getbuffer())
 
-    # Check if model and preprocessor files exist
+    # Check if model and scaler files exist
     if not os.path.exists(model_path):
         st.error("Model file not found. Please upload the model file to the correct path.")
         st.stop()
 
-    if not os.path.exists(preprocessor_path):
-        st.error("Preprocessor file not found. Please upload the preprocessor file to the correct path.")
+    if not os.path.exists(scaler_path):
+        st.error("Scaler file not found. Please upload the scaler file to the correct path.")
         st.stop()
 
-    # Load pre-trained model and preprocessor
-    model, preprocessor, error_message = load_model_and_preprocessor(model_path, preprocessor_path)
+    # Load pre-trained model and scaler
+    model, scaler, error_message = load_model_and_scaler(model_path, scaler_path)
     if error_message:
         st.error(error_message)
         st.stop()
 
-    # Ensure preprocessor is fitted correctly
+    # Ensure scaler is fitted correctly
     household_data = generate_household_data(datetime.now() - timedelta(days=365), datetime.now())
-    preprocessor = fit_preprocessor(preprocessor, household_data)
+    scaler = fit_scaler(scaler, household_data)
 
     # Example of model prediction
     def predict_usage(model, data):
         # Select relevant features for prediction
-        features = data[['Ward', 'Area', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)', 'Income Level', 'Household Size']]
-        features = preprocessor.transform(features)
-        prediction = model.predict(features)
+        features_transformed = transform_data(data, scaler)
+        st.write("Shape of features after transformation:", features_transformed.shape)
+        prediction = model.predict(features_transformed)
         return prediction.flatten()
 
     if st.button("Predict Usage"):
         try:
+            # Debugging: Verify input shape
+            features_transformed = transform_data(household_data, scaler)
+            st.write("Shape of features after transformation for prediction:", features_transformed.shape)
+
             prediction = predict_usage(model, household_data)
             household_data['Predicted Usage'] = prediction
 
             st.write("### Predicted Data", household_data)
 
             # Debugging: Print shapes and first few rows of actual and predicted usage
-            st.write("Shape of features:", household_data.shape)
+            st.write("Shape of features:", features_transformed.shape)
             st.write("Shape of predictions:", prediction.shape)
             st.write("First few rows of actual usage:")
             st.write(household_data['Monthly Water Usage (Liters)'].head())
@@ -206,6 +226,35 @@ elif selected == "Model":
                 st.write("Data saved to `predicted_household_water_usage.csv`")
         except Exception as e:
             st.error(f"An error occurred during prediction: {e}")
+
+# Report Issue page
+elif selected == "Report Issue":
+    st.title("Report a Water-Related Issue")
+
+    with st.form("report_issue_form"):
+        household_id = st.text_input("Household ID")
+        issue_type = st.selectbox("Type of Issue", ["Leakage", "No Supply", "Low Pressure", "Quality Issue", "Other"])
+        description = st.text_area("Description")
+        report_date = st.date_input("Date", datetime.now())
+        submit_button = st.form_submit_button("Submit Report")
+
+        if submit_button:
+            if not household_id or not issue_type or not description:
+                st.error("Please fill out all fields in the form.")
+            else:
+                # Save the report to a CSV file
+                report_data = {
+                    "Household ID": [household_id],
+                    "Issue Type": [issue_type],
+                    "Description": [description],
+                    "Date": [report_date]
+                }
+                report_df = pd.DataFrame(report_data)
+                if os.path.exists("issue_reports.csv"):
+                    report_df.to_csv("issue_reports.csv", mode='a', header=False, index=False)
+                else:
+                    report_df.to_csv("issue_reports.csv", index=False)
+                st.success("Issue reported successfully!")
 
 # About page
 elif selected == "About":
