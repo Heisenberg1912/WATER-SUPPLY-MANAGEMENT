@@ -1,42 +1,9 @@
-import streamlit as st
+    import streamlit as st
 import pandas as pd
 import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
-from st_aggrid import AgGrid, GridOptionsBuilder
 from streamlit_option_menu import option_menu
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Email Function
-def send_email(subject, body, to_email):
-    from_email = "your_email@example.com"
-    from_password = "your_email_password"
-
-    msg = MIMEMultipart()
-    msg['From'] = from_email
-    msg['To'] = to_email
-    msg['Subject'] = subject
-
-    msg.attach(MIMEText(body, 'plain'))
-
-    try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(from_email, from_password)
-        text = msg.as_string()
-        server.sendmail(from_email, to_email, text)
-        server.quit()
-        logging.info("Email sent successfully")
-        return True
-    except Exception as e:
-        logging.error(f"Failed to send email: {e}")
-        return False
 
 # Load the dataset
 file_path = 'indore_water_usage_data_difficult2.parquet'
@@ -70,7 +37,8 @@ household_data['Ward Name'] = household_data['Ward'].map(ward_names)
 
 # Add latitude and longitude for each ward (these are made-up coordinates for demonstration purposes)
 ward_coords = {
-   'Sirapur': (22.7196, 75.8577),
+    
+'Sirapur': (22.7196, 75.8577),
     'Chandan Nagar': (22.7242, 75.8648),
     'Kaalaani Nagar': (22.7324, 75.8765),
     'Sukhadev Nagar': (22.7292, 75.8744),
@@ -168,177 +136,140 @@ map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 with open('carousel.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-def main():
-    # Navbar setup
-    with st.sidebar:
-        st.image('1.png', width=200)  # Use the uploaded logo path
-        selected = option_menu("Main Menu", ["Home", "Data", "Map", "Report Issue", "About"], 
-            icons=['house', 'database', 'map', 'envelope', 'info'], menu_icon="cast", default_index=0)
+# Navbar setup
+with st.sidebar:
+    st.image('1.png', width=200)  # Use the uploaded logo path
+    selected = option_menu("Main Menu", ["Home", "Data", "Map", "About"], 
+        icons=['house', 'database', 'map', 'info'], menu_icon="cast", default_index=0)
 
-    # Home page
-    if selected == "Home":
-        st.title("Water Supply Management")
-        st.write("Welcome to the Water Supply Management System. Use the sidebar to navigate to different sections.")
-        
-        # Load and display HTML for the carousel
-        with open('carousel.html') as f:
-            st.markdown(f.read(), unsafe_allow_html=True)
+# Home page
+if selected == "Home":
+    st.title("Water Supply Management")
+    st.write("Welcome to the Water Supply Management System. Use the sidebar to navigate to different sections.")
+    
+    # Load and display HTML for the carousel
+    with open('carousel.html') as f:
+        st.markdown(f.read(), unsafe_allow_html=True)
 
-    # Data page
-    elif selected == "Data":
-        st.title("Data Overview")
-        date_option = st.selectbox("Select date range", ["1 month", "6 months", "1 year"])
+# Data page
+elif selected == "Data":
+    st.title("Data Overview")
+    date_option = st.selectbox("Select date range", ["1 month", "6 months", "1 year"])
 
-        if date_option == "1 month":
-            start_date = pd.to_datetime("today") - pd.DateOffset(months=1)
-        elif date_option == "6 months":
-            start_date = pd.to_datetime("today") - pd.DateOffset(months=6)
-        elif date_option == "1 year":
-            start_date = pd.to_datetime("today") - pd.DateOffset(years=1)
+    if date_option == "1 month":
+        start_date = pd.to_datetime("today") - pd.DateOffset(months=1)
+    elif date_option == "6 months":
+        start_date = pd.to_datetime("today") - pd.DateOffset(months=6)
+    elif date_option == "1 year":
+        start_date = pd.to_datetime("today") - pd.DateOffset(years=1)
 
-        end_date = pd.to_datetime("today")
+    end_date = pd.to_datetime("today")
 
-        # Filter data based on date range
-        filtered_data = household_data[(household_data['Date'] >= start_date) & (household_data['Date'] <= end_date)]
+    # Filter data based on date range
+    filtered_data = household_data[(household_data['Date'] >= start_date) & (household_data['Date'] <= end_date)]
 
-        wards = filtered_data['Ward Name'].unique()
-        selected_ward = st.selectbox("Select Ward", sorted(wards))
+    wards = filtered_data['Ward Name'].unique()
+    selected_ward = st.selectbox("Select Ward", sorted(wards))
 
-        if selected_ward:
-            # Filter data based on selected ward
-            ward_data = filtered_data[filtered_data['Ward Name'] == selected_ward]
+    if selected_ward:
+        # Filter data based on selected ward
+        ward_data = filtered_data[filtered_data['Ward Name'] == selected_ward]
 
-            st.write(f"### Household Data for Ward {selected_ward}")
+        st.write(f"### Household Data for Ward {selected_ward}", ward_data)
 
-            # Use AgGrid for displaying the dataframe
-            gb = GridOptionsBuilder.from_dataframe(ward_data)
-            gb.configure_pagination(paginationAutoPageSize=True)
-            gb.configure_side_bar()
-            gb.configure_default_column(editable=True, groupable=True)
-            gridOptions = gb.build()
+        # Calculate statistics
+        total_households = len(ward_data)
+        households_receiving_water = ward_data['Leakage Detected (Yes/No)'].value_counts().get('No', 0)
+        households_not_receiving_water = total_households - households_receiving_water
 
-            AgGrid(ward_data, gridOptions=gridOptions, enable_enterprise_modules=True, theme='material')
+        used_within_limit = (ward_data['Monthly Water Usage (Liters)'] <= 100).sum()
+        wasted_beyond_limit = (ward_data['Monthly Water Usage (Liters)'] > 100).sum()
 
-            # Calculate statistics
-            total_households = len(ward_data)
-            households_receiving_water = ward_data['Leakage Detected (Yes/No)'].value_counts().get('No', 0)
-            households_not_receiving_water = total_households - households_receiving_water
+        total_usage = ward_data['Monthly Water Usage (Liters)'].sum()
+        total_wasted = ward_data.loc[ward_data['Monthly Water Usage (Liters)'] > 100, 'Monthly Water Usage (Liters)'].sum() - 100 * wasted_beyond_limit
 
-            used_within_limit = (ward_data['Monthly Water Usage (Liters)'] <= 100).sum()
-            wasted_beyond_limit = (ward_data['Monthly Water Usage (Liters)'] > 100).sum()
+        mean_usage = ward_data['Monthly Water Usage (Liters)'].mean()
+        median_usage = ward_data['Monthly Water Usage (Liters)'].median()
+        std_usage = ward_data['Monthly Water Usage (Liters)'].std()
 
-            total_usage = ward_data['Monthly Water Usage (Liters)'].sum()
-            total_wasted = ward_data.loc[ward_data['Monthly Water Usage (Liters)'] > 100, 'Monthly Water Usage (Liters)'].sum() - 100 * wasted_beyond_limit
+        st.write(f"**Total households in Ward {selected_ward}**: {total_households}")
+        st.write(f"**Households receiving water**: {households_receiving_water}")
+        st.write(f"**Households not receiving water**: {households_not_receiving_water}")
+        st.write(f"**Households using water within limit**: {used_within_limit}")
+        st.write(f"**Households wasting water beyond limit**: {wasted_beyond_limit}")
+        st.write(f"**Total water usage (liters)**: {total_usage:.2f}")
+        st.write(f"**Total water wasted (liters)**: {total_wasted:.2f}")
+        st.write(f"**Mean water usage (liters)**: {mean_usage:.2f}")
+        st.write(f"**Median water usage (liters)**: {median_usage:.2f}")
+        st.write(f"**Standard deviation of water usage (liters)**: {std_usage:.2f}")
 
-            mean_usage = ward_data['Monthly Water Usage (Liters)'].mean()
-            median_usage = ward_data['Monthly Water Usage (Liters)'].median()
-            std_usage = ward_data['Monthly Water Usage (Liters)'].std()
+        # Interactive bar plot
+        fig = px.bar(
+            x=['Receiving Water', 'Not Receiving Water'], 
+            y=[households_receiving_water, households_not_receiving_water],
+            labels={'x': 'Household Status', 'y': 'Number of Households'},
+            title=f'Households Receiving vs. Not Receiving Water in Ward {selected_ward}'
+        )
+        st.plotly_chart(fig)
 
-            st.write(f"**Total households in Ward {selected_ward}**: {total_households}")
-            st.write(f"**Households receiving water**: {households_receiving_water}")
-            st.write(f"**Households not receiving water**: {households_not_receiving_water}")
-            st.write(f"**Households using water within limit**: {used_within_limit}")
-            st.write(f"**Households wasting water beyond limit**: {wasted_beyond_limit}")
-            st.write(f"**Total water usage (liters)**: {total_usage:.2f}")
-            st.write(f"**Total water wasted (liters)**: {total_wasted:.2f}")
-            st.write(f"**Mean water usage (liters)**: {mean_usage:.2f}")
-            st.write(f"**Median water usage (liters)**: {median_usage:.2f}")
-            st.write(f"**Standard deviation of water usage (liters)**: {std_usage:.2f}")
+        fig2 = px.bar(
+            x=['Within Limit', 'Beyond Limit'], 
+            y=[used_within_limit, wasted_beyond_limit],
+            labels={'x': 'Usage Status', 'y': 'Number of Households'},
+            title=f'Households Using Water Within Limit vs. Beyond Limit in Ward {selected_ward}'
+        )
+        st.plotly_chart(fig2)
 
-            # Interactive bar plot
-            fig = px.bar(
-                x=['Receiving Water', 'Not Receiving Water'], 
-                y=[households_receiving_water, households_not_receiving_water],
-                labels={'x': 'Household Status', 'y': 'Number of Households'},
-                title=f'Households Receiving vs. Not Receiving Water in Ward {selected_ward}'
-            )
-            st.plotly_chart(fig)
+        # Additional graphs
+        # Water usage distribution
+        fig3 = px.histogram(ward_data, x='Monthly Water Usage (Liters)', nbins=20, title=f'Water Usage Distribution in Ward {selected_ward}')
+        st.plotly_chart(fig3)
 
-            fig2 = px.bar(
-                x=['Within Limit', 'Beyond Limit'], 
-                y=[used_within_limit, wasted_beyond_limit],
-                labels={'x': 'Usage Status', 'y': 'Number of Households'},
-                title=f'Households Using Water Within Limit vs. Beyond Limit in Ward {selected_ward}'
-            )
-            st.plotly_chart(fig2)
+        # Box plot for water usage by income level
+        fig4 = px.box(ward_data, x='Income Level', y='Monthly Water Usage (Liters)', title=f'Water Usage by Income Level in Ward {selected_ward}')
+        st.plotly_chart(fig4)
 
-            # Additional graphs
-            # Water usage distribution
-            fig3 = px.histogram(ward_data, x='Monthly Water Usage (Liters)', nbins=20, title=f'Water Usage Distribution in Ward {selected_ward}')
-            st.plotly_chart(fig3)
+        # Heatmap for water usage
+        heatmap_data = ward_data.pivot_table(values='Monthly Water Usage (Liters)', index='Household ID', columns='Date', fill_value=0)
+        fig5, ax5 = plt.subplots(figsize=(10, 8))
+        sns.heatmap(heatmap_data, ax=ax5, cmap='viridis')
+        st.pyplot(fig5)
 
-            # Box plot for water usage by income level
-            fig4 = px.box(ward_data, x='Income Level', y='Monthly Water Usage (Liters)', title=f'Water Usage by Income Level in Ward {selected_ward}')
-            st.plotly_chart(fig4)
+# Map page
+elif selected == "Map":
+    st.title("Ward Map Overview")
+    st.write("This map highlights wards with water disparity and leakage detection issues.")
+    
+    # Filter data for the map
+    map_data = household_data[['Ward Name', 'Latitude', 'Longitude', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)']].drop_duplicates()
+    map_data = map_data.dropna(subset=['Latitude', 'Longitude'])
+    map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
-            # Heatmap for water usage
-            heatmap_data = ward_data.pivot_table(values='Monthly Water Usage (Liters)', index='Household ID', columns='Date', fill_value=0)
-            fig5, ax5 = plt.subplots(figsize=(10, 8))
-            sns.heatmap(heatmap_data, ax=ax5, cmap='viridis')
-            st.pyplot(fig5)
+    wards = map_data['Ward Name'].unique()
+    selected_ward = st.selectbox("Select Ward", sorted(wards))
 
-    # Map page
-    elif selected == "Map":
-        st.title("Ward Map Overview")
-        st.write("This map highlights wards with water disparity and leakage detection issues.")
-        
-        # Filter data for the map
-        wards = map_data['Ward Name'].unique()
-        selected_ward = st.selectbox("Select Ward", sorted(wards))
+    if selected_ward:
+        # Filter map data based on selected ward
+        ward_map_data = map_data[map_data['Ward Name'] == selected_ward]
 
-        if selected_ward:
-            # Filter map data based on selected ward
-            ward_map_data = map_data[map_data['Ward Name'] == selected_ward]
+        # Create a new column to highlight disparity and leakage
+        ward_map_data['Disparity'] = ward_map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
+        ward_map_data['Leakage'] = ward_map_data.apply(lambda x: 10 if x['Leakage Detected (Yes/No)'] == 'Yes' else 5, axis=1)  # Use different sizes for leakage
 
-            # Create a new column to highlight disparity and leakage
-            ward_map_data['Disparity'] = ward_map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
-            ward_map_data['Leakage'] = ward_map_data.apply(lambda x: 10 if x['Leakage Detected (Yes/No)'] == 'Yes' else 5, axis=1)  # Use different sizes for leakage
+        fig = px.scatter_mapbox(ward_map_data, 
+                                lat="Latitude", 
+                                lon="Longitude", 
+                                color="Disparity",
+                                size="Leakage",
+                                hover_name="Ward Name", 
+                                hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
+                                zoom=10, 
+                                height=600)
+        fig.update_layout(mapbox_style="open-street-map")
+        fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+        st.plotly_chart(fig)
 
-            fig = px.scatter_mapbox(ward_map_data, 
-                                    lat="Latitude", 
-                                    lon="Longitude", 
-                                    color="Disparity",
-                                    size="Leakage",
-                                    hover_name="Ward Name", 
-                                    hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
-                                    zoom=10, 
-                                    height=600)
-            fig.update_layout(mapbox_style="open-street-map")
-            fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-            st.plotly_chart(fig)
-
-    # Report Issue page
-    elif selected == "Report Issue":
-        st.title("Report Water Related Issue")
-
-        with st.form(key='report_form'):
-            user_name = st.text_input("Your Name")
-            user_email = st.text_input("Your Email")
-            issue_type = st.selectbox("Type of Issue", ["Leakage", "No Water Supply", "Contaminated Water", "Others"])
-            issue_description = st.text_area("Describe the Issue")
-            submit_button = st.form_submit_button(label='Submit')
-
-        if submit_button:
-            if user_name and user_email and issue_type and issue_description:
-                subject = f"Water Issue Report: {issue_type}"
-                body = f"""
-                Name: {user_name}
-                Email: {user_email}
-                Issue Type: {issue_type}
-                Description: {issue_description}
-                """
-                sent = send_email(subject, body, "dmindore@nic.in")
-                if sent:
-                    st.success("Your report has been sent successfully.")
-                else:
-                    st.error("Failed to send your report. Please try again.")
-            else:
-                st.error("Please fill out all the fields.")
-
-    # About page
-    elif selected == "About":
-        st.title("About")
-        st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict future water usage based on various factors such as household size, days without water, and average temperature. The data is visualized using interactive plots for better understanding and decision making.")
-
-if __name__ == "__main__":
-    main()
+# About page
+elif selected == "About":
+    st.title("About")
+    st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict future water usage based on various factors such as household size, days without water, and average temperature. The data is visualized using interactive plots for better understanding and decision making.")
