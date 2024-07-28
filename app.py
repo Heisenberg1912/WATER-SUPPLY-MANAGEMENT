@@ -8,6 +8,10 @@ from streamlit_option_menu import option_menu
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Email Function
 def send_email(subject, body, to_email):
@@ -28,9 +32,10 @@ def send_email(subject, body, to_email):
         text = msg.as_string()
         server.sendmail(from_email, to_email, text)
         server.quit()
+        logging.info("Email sent successfully")
         return True
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        logging.error(f"Failed to send email: {e}")
         return False
 
 # Load the dataset
