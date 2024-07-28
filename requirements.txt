@@ -9,3 +9,6 @@ streamlit==1.10.0
 scikit-learn==1.2.2
 streamlit-option-menu==0.3.2
 streamlit-aggrid==0.3.3
+altair==4.2.0
+click==8.0.0
+protobuf==3.20.0
