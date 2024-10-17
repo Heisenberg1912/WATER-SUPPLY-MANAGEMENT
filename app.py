@@ -167,38 +167,52 @@ elif selected == "Data":
         st.pyplot(fig5)
 
 # Map page
+# Map page
 elif selected == "Map":
     st.title("Ward Map Overview")
     st.write("This map highlights wards with water disparity and leakage detection issues.")
-    
-    # Filter data for the map
+
+    # Ensure map data has valid latitude, longitude, and ward information
     map_data = household_data[['Ward Name', 'Latitude', 'Longitude', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)']].drop_duplicates()
-    map_data = map_data.dropna(subset=['Latitude', 'Longitude'])
-    map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
+    
+    # Check if map_data has any valid rows with coordinates
+    if map_data.empty or map_data['Ward Name'].nunique() == 0:
+        st.warning("No data available for mapping. Please check your dataset.")
+    else:
+        # Continue only if valid data is present
+        map_data = map_data.dropna(subset=['Latitude', 'Longitude'])
+        map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
-    wards = map_data['Ward Name'].unique()
-    selected_ward = st.selectbox("Select Ward", sorted(wards))
+        # Get unique wards from map data
+        wards = map_data['Ward Name'].unique()
+        
+        # Ensure wards exist before populating the dropdown
+        if len(wards) > 0:
+            selected_ward = st.selectbox("Select Ward", sorted(wards))
 
-    if selected_ward:
-        # Filter map data based on selected ward
-        ward_map_data = map_data[map_data['Ward Name'] == selected_ward]
+            if selected_ward:
+                # Filter map data based on selected ward
+                ward_map_data = map_data[map_data['Ward Name'] == selected_ward]
 
-        # Create a new column to highlight disparity and leakage
-        ward_map_data['Disparity'] = ward_map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
-        ward_map_data['Leakage'] = ward_map_data.apply(lambda x: 10 if x['Leakage Detected (Yes/No)'] == 'Yes' else 5, axis=1)  # Use different sizes for leakage
+                # Create a new column to highlight disparity and leakage
+                ward_map_data['Disparity'] = ward_map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
+                ward_map_data['Leakage'] = ward_map_data.apply(lambda x: 10 if x['Leakage Detected (Yes/No)'] == 'Yes' else 5, axis=1)  # Use different sizes for leakage
 
-        fig = px.scatter_mapbox(ward_map_data, 
-                                lat="Latitude", 
-                                lon="Longitude", 
-                                color="Disparity",
-                                size="Leakage",
-                                hover_name="Ward Name", 
-                                hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
-                                zoom=10, 
-                                height=600)
-        fig.update_layout(mapbox_style="open-street-map")
-        fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-        st.plotly_chart(fig)
+                fig = px.scatter_mapbox(ward_map_data, 
+                                        lat="Latitude", 
+                                        lon="Longitude", 
+                                        color="Disparity",
+                                        size="Leakage",
+                                        hover_name="Ward Name", 
+                                        hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
+                                        zoom=10, 
+                                        height=600)
+                fig.update_layout(mapbox_style="open-street-map")
+                fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+                st.plotly_chart(fig)
+        else:
+            st.warning("No valid wards to select. Please check your dataset.")
+
 
 # About page
 elif selected == "About":
