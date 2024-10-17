@@ -35,9 +35,10 @@ ward_names = {
 # Add ward names to the dataframe
 household_data['Ward Name'] = household_data['Ward'].map(ward_names)
 
-# Add latitude and longitude for each ward (example coordinates, please complete with actual data)
+# Add latitude and longitude for each ward (these are made-up coordinates for demonstration purposes)
 ward_coords = {
- 'Sirapur': (22.7196, 75.8577),
+    
+'Sirapur': (22.7196, 75.8577),
     'Chandan Nagar': (22.7242, 75.8648),
     'Kaalaani Nagar': (22.7324, 75.8765),
     'Sukhadev Nagar': (22.7292, 75.8744),
@@ -124,38 +125,33 @@ ward_coords = {
     'Prajaapat Nagar': (22.7930, 75.9340)
 }
 
-# Add Latitude and Longitude columns
 household_data['Latitude'] = household_data['Ward Name'].map(lambda x: ward_coords.get(x, (None, None))[0])
 household_data['Longitude'] = household_data['Ward Name'].map(lambda x: ward_coords.get(x, (None, None))[1])
-
-# Fill missing values for Latitude and Longitude if any
-household_data['Latitude'].fillna(22.7196, inplace=True)
-household_data['Longitude'].fillna(75.8577, inplace=True)
 
 # Filter out rows with missing or zero coordinates
 map_data = household_data.dropna(subset=['Latitude', 'Longitude'])
 map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
-# Load CSS (optional)
+# Load CSS
 with open('carousel.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-# Sidebar Menu Setup - Ensure it's only called once
+# Navbar setup
 with st.sidebar:
     st.image('1.png', width=200)  # Use the uploaded logo path
     selected = option_menu("Main Menu", ["Home", "Data", "Map", "About"], 
         icons=['house', 'database', 'map', 'info'], menu_icon="cast", default_index=0)
 
-# Home Page - Ensure correct placement and layout
+# Home page
 if selected == "Home":
-    st.title("Water Supply Management System")
+    st.title("Water Supply Management")
     st.write("Welcome to the Water Supply Management System. Use the sidebar to navigate to different sections.")
     
-    # Home page content
-    st.write("This application provides data analysis and visualization of water usage in various wards of Indore.")
-    st.write("Navigate to the Data or Map sections to explore the analysis in more detail.")
+    # Load and display HTML for the carousel
+    with open('carousel.html') as f:
+        st.markdown(f.read(), unsafe_allow_html=True)
 
-# Data Page
+# Data page
 elif selected == "Data":
     st.title("Data Overview")
     date_option = st.selectbox("Select date range", ["1 month", "6 months", "1 year"])
@@ -181,7 +177,7 @@ elif selected == "Data":
 
         st.write(f"### Household Data for Ward {selected_ward}", ward_data)
 
-        # Show some calculated statistics
+        # Calculate statistics
         total_households = len(ward_data)
         households_receiving_water = ward_data['Leakage Detected (Yes/No)'].value_counts().get('No', 0)
         households_not_receiving_water = total_households - households_receiving_water
@@ -216,57 +212,64 @@ elif selected == "Data":
         )
         st.plotly_chart(fig)
 
-        # Additional visualization (box plot, heatmap, etc.)
+        fig2 = px.bar(
+            x=['Within Limit', 'Beyond Limit'], 
+            y=[used_within_limit, wasted_beyond_limit],
+            labels={'x': 'Usage Status', 'y': 'Number of Households'},
+            title=f'Households Using Water Within Limit vs. Beyond Limit in Ward {selected_ward}'
+        )
+        st.plotly_chart(fig2)
+
+        # Additional graphs
+        # Water usage distribution
+        fig3 = px.histogram(ward_data, x='Monthly Water Usage (Liters)', nbins=20, title=f'Water Usage Distribution in Ward {selected_ward}')
+        st.plotly_chart(fig3)
+
+        # Box plot for water usage by income level
         fig4 = px.box(ward_data, x='Income Level', y='Monthly Water Usage (Liters)', title=f'Water Usage by Income Level in Ward {selected_ward}')
         st.plotly_chart(fig4)
 
-import plotly.express as px
-# Map Page
+        # Heatmap for water usage
+        heatmap_data = ward_data.pivot_table(values='Monthly Water Usage (Liters)', index='Household ID', columns='Date', fill_value=0)
+        fig5, ax5 = plt.subplots(figsize=(10, 8))
+        sns.heatmap(heatmap_data, ax=ax5, cmap='viridis')
+        st.pyplot(fig5)
+
+# Map page
 elif selected == "Map":
     st.title("Ward Map Overview")
     st.write("This map highlights wards with water disparity and leakage detection issues.")
+    
+    # Filter data for the map
+    map_data = household_data[['Ward Name', 'Latitude', 'Longitude', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)']].drop_duplicates()
+    map_data = map_data.dropna(subset=['Latitude', 'Longitude'])
+    map_data = map_data[(map_data['Latitude'] != 0) & (map_data['Longitude'] != 0)]
 
-    # Ensure map data has valid ward and water usage information
-    map_data = household_data[['Ward Name', 'Monthly Water Usage (Liters)', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)']].drop_duplicates()
+    wards = map_data['Ward Name'].unique()
+    selected_ward = st.selectbox("Select Ward", sorted(wards))
 
-    # Check if map_data has any valid rows
-    if map_data.empty or map_data['Ward Name'].nunique() == 0:
-        st.warning("No data available for mapping. Please check your dataset.")
-    else:
-        # Create a pivot table to summarize water usage per ward for the heatmap
-        heatmap_data = map_data.pivot_table(values='Monthly Water Usage (Liters)', 
-                                            index='Ward Name', 
-                                            aggfunc='mean', 
-                                            fill_value=0)
+    if selected_ward:
+        # Filter map data based on selected ward
+        ward_map_data = map_data[map_data['Ward Name'] == selected_ward]
 
-        # Sort the wards by water usage
-        heatmap_data = heatmap_data.sort_values(by='Monthly Water Usage (Liters)', ascending=False)
+        # Create a new column to highlight disparity and leakage
+        ward_map_data['Disparity'] = ward_map_data.apply(lambda x: 'Disparity' if x['Disparity in Supply (Yes/No)'] == 'Yes' else 'No Disparity', axis=1)
+        ward_map_data['Leakage'] = ward_map_data.apply(lambda x: 10 if x['Leakage Detected (Yes/No)'] == 'Yes' else 5, axis=1)  # Use different sizes for leakage
 
-        # Reset the index to get ward names in a column
-        heatmap_data = heatmap_data.reset_index()
-
-        # Create an interactive heatmap using Plotly Express
-        fig = px.density_heatmap(heatmap_data, 
-                                 x='Ward Name', 
-                                 y='Monthly Water Usage (Liters)', 
-                                 z='Monthly Water Usage (Liters)',
-                                 color_continuous_scale='coolwarm',
-                                 labels={'Monthly Water Usage (Liters)': 'Water Usage (Liters)'},
-                                 title="Average Monthly Water Usage by Ward")
-
-        # Customize layout and axes
-        fig.update_layout(
-            xaxis_title="Ward Name",
-            yaxis_title="Average Water Usage (Liters)",
-            coloraxis_colorbar=dict(title="Water Usage (Liters)"),
-            height=600
-        )
-
-        # Display the interactive heatmap
+        fig = px.scatter_mapbox(ward_map_data, 
+                                lat="Latitude", 
+                                lon="Longitude", 
+                                color="Disparity",
+                                size="Leakage",
+                                hover_name="Ward Name", 
+                                hover_data=["Leakage Detected (Yes/No)", "Disparity in Supply (Yes/No)"],
+                                zoom=10, 
+                                height=600)
+        fig.update_layout(mapbox_style="open-street-map")
+        fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
         st.plotly_chart(fig)
 
-
-# About Page
+# About page
 elif selected == "About":
     st.title("About")
-    st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict future water usage based on various factors such as household size, days without water, and average temperature.")
+    st.write("This application is designed to manage water supply for households. It provides data analysis and predictive modeling for water usage. The system can predict future water usage based on various factors such as household size, days without water, and average temperature. The data is visualized using interactive plots for better understanding and decision making.")
