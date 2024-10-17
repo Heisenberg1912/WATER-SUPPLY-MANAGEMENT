@@ -220,6 +220,8 @@ elif selected == "Data":
         fig4 = px.box(ward_data, x='Income Level', y='Monthly Water Usage (Liters)', title=f'Water Usage by Income Level in Ward {selected_ward}')
         st.plotly_chart(fig4)
 
+import plotly.express as px
+
 # Map page
 elif selected == "Map":
     st.title("Ward Map Overview")
@@ -241,24 +243,29 @@ elif selected == "Map":
         # Sort the wards by water usage
         heatmap_data = heatmap_data.sort_values(by='Monthly Water Usage (Liters)', ascending=False)
 
-        # Create an interactive heatmap using Plotly Express
-        fig = px.imshow(heatmap_data.values,
-                        labels=dict(x="Water Usage (Liters)", y="Ward Name", color="Water Usage"),
-                        x=heatmap_data.columns,
-                        y=heatmap_data.index,
-                        color_continuous_scale='coolwarm',
-                        aspect="auto")
+        # Reset the index to get ward names in a column
+        heatmap_data = heatmap_data.reset_index()
 
-        # Add title and format axes
+        # Create an interactive heatmap using Plotly Express
+        fig = px.density_heatmap(heatmap_data, 
+                                 x='Ward Name', 
+                                 y='Monthly Water Usage (Liters)', 
+                                 z='Monthly Water Usage (Liters)',
+                                 color_continuous_scale='coolwarm',
+                                 labels={'Monthly Water Usage (Liters)': 'Water Usage (Liters)'},
+                                 title="Average Monthly Water Usage by Ward")
+
+        # Customize layout and axes
         fig.update_layout(
-            title="Average Monthly Water Usage by Ward",
-            xaxis_title="Ward",
+            xaxis_title="Ward Name",
             yaxis_title="Average Water Usage (Liters)",
             coloraxis_colorbar=dict(title="Water Usage (Liters)"),
+            height=600
         )
 
         # Display the interactive heatmap
         st.plotly_chart(fig)
+
 
 # About Page
 elif selected == "About":
