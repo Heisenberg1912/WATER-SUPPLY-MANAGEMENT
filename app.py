@@ -221,8 +221,7 @@ elif selected == "Data":
         st.plotly_chart(fig4)
 
 import plotly.express as px
-
-# Map page
+# Map Page
 elif selected == "Map":
     st.title("Ward Map Overview")
     st.write("This map highlights wards with water disparity and leakage detection issues.")
