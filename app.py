@@ -35,13 +35,29 @@ ward_names = {
 # Add ward names to the dataframe
 household_data['Ward Name'] = household_data['Ward'].map(ward_names)
 
+# Display data preview and missing values
+st.write("Preview of Data:")
+st.write(household_data[['Ward', 'Ward Name', 'Latitude', 'Longitude']].head())
+
+# Check for missing values in Ward Name, Latitude, and Longitude
+missing_data = household_data[['Ward Name', 'Latitude', 'Longitude']].isnull().sum()
+st.write("Missing Values in Columns:", missing_data)
+
 # Add latitude and longitude for each ward (these are made-up coordinates for demonstration purposes)
 ward_coords = {
-    # Coordinates for wards
+    # Fill with actual coordinates of the wards
+    'Sirapur': (22.7196, 75.8577),
+    'Chandan Nagar': (22.7242, 75.8648),
+    'Kaalaani Nagar': (22.7324, 75.8765),
+    # Add other wards here
 }
 
 household_data['Latitude'] = household_data['Ward Name'].map(lambda x: ward_coords.get(x, (None, None))[0])
 household_data['Longitude'] = household_data['Ward Name'].map(lambda x: ward_coords.get(x, (None, None))[1])
+
+# Fill missing values with defaults for demonstration
+household_data['Latitude'].fillna(22.7196, inplace=True)  # Default Latitude
+household_data['Longitude'].fillna(75.8577, inplace=True)  # Default Longitude
 
 # Filter out rows with missing or zero coordinates
 map_data = household_data.dropna(subset=['Latitude', 'Longitude'])
@@ -167,7 +183,6 @@ elif selected == "Data":
         st.pyplot(fig5)
 
 # Map page
-# Map page
 elif selected == "Map":
     st.title("Ward Map Overview")
     st.write("This map highlights wards with water disparity and leakage detection issues.")
@@ -212,7 +227,6 @@ elif selected == "Map":
                 st.plotly_chart(fig)
         else:
             st.warning("No valid wards to select. Please check your dataset.")
-
 
 # About page
 elif selected == "About":
