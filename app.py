@@ -220,13 +220,12 @@ elif selected == "Data":
         fig4 = px.box(ward_data, x='Income Level', y='Monthly Water Usage (Liters)', title=f'Water Usage by Income Level in Ward {selected_ward}')
         st.plotly_chart(fig4)
 
-# Map Page
 # Map page
 elif selected == "Map":
     st.title("Ward Map Overview")
     st.write("This map highlights wards with water disparity and leakage detection issues.")
 
-    # Ensure map data has valid latitude, longitude, and ward information
+    # Ensure map data has valid ward and water usage information
     map_data = household_data[['Ward Name', 'Monthly Water Usage (Liters)', 'Leakage Detected (Yes/No)', 'Disparity in Supply (Yes/No)']].drop_duplicates()
 
     # Check if map_data has any valid rows
@@ -242,26 +241,24 @@ elif selected == "Map":
         # Sort the wards by water usage
         heatmap_data = heatmap_data.sort_values(by='Monthly Water Usage (Liters)', ascending=False)
 
-        # Set up the matplotlib figure
-        fig, ax = plt.subplots(figsize=(10, 8))
+        # Create an interactive heatmap using Plotly Express
+        fig = px.imshow(heatmap_data.values,
+                        labels=dict(x="Water Usage (Liters)", y="Ward Name", color="Water Usage"),
+                        x=heatmap_data.columns,
+                        y=heatmap_data.index,
+                        color_continuous_scale='coolwarm',
+                        aspect="auto")
 
-        # Draw the heatmap with Seaborn
-        sns.heatmap(heatmap_data, 
-                    cmap='coolwarm',        # Linear gradient color palette
-                    linewidths=0.5,         # Add gridlines between cells
-                    linecolor='gray',       # Color for gridlines
-                    annot=True,             # Annotate each cell with the data
-                    fmt='.2f',              # Format the annotation to 2 decimal places
-                    cbar_kws={'label': 'Average Monthly Water Usage (Liters)'})  # Color bar label
+        # Add title and format axes
+        fig.update_layout(
+            title="Average Monthly Water Usage by Ward",
+            xaxis_title="Ward",
+            yaxis_title="Average Water Usage (Liters)",
+            coloraxis_colorbar=dict(title="Water Usage (Liters)"),
+        )
 
-        # Add title and labels
-        ax.set_title('Average Monthly Water Usage by Ward', fontsize=16)
-        ax.set_xlabel('Water Usage (Liters)', fontsize=12)
-        ax.set_ylabel('Ward Name', fontsize=12)
-
-        # Display the heatmap
-        st.pyplot(fig)
-
+        # Display the interactive heatmap
+        st.plotly_chart(fig)
 
 # About Page
 elif selected == "About":
